@@ -131,7 +131,7 @@ def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence
         f"🕒 *Entry Time:* `{entry_time}`\n"
         f"📈 *Win Rate:* `{win_rate}`\n"
         f"🛡️ *Confluence:* `{confidence}`\n"
-        f"💰 *Money Management:* `1% Account Capital (Fixed X1)`"
+        f"💰 *Money Management:* `1% Account Capital`"
     )
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     payload = {"chat_id": chat_id, "text": message, "parse_mode": "Markdown"}
@@ -206,13 +206,12 @@ if st.session_state.signal_active:
     * **Entry Time (Candle Close):** `{st.session_state.cached_time}`
     * **Estimated Success Rate:** `{st.session_state.cached_win_rate}`
     * **Confluence Status:** `{st.session_state.cached_confidence}`
-    * **Money Management:** `1% Account Capital (Fixed X1)`
+    * **Money Management:** `1% Account Capital`
     """)
 
     st.markdown("### ⏳ Current Candle Countdown")
     placeholder = st.empty()
     
-    # Sincronizzato direttamente con l'orario reale di chiusura della candela del broker
     initial_left = get_seconds_to_next_candle(st.session_state.cached_tf_seconds)
 
     # Countdown loop in tempo reale
@@ -224,8 +223,9 @@ if st.session_state.signal_active:
 
     placeholder.markdown('<div class="countdown-box">⏱️ 00:00</div>', unsafe_allow_html=True)
     
-    # --- VERDICT & X1 RECOMMENDATION (SI ATTIVA ESATTAMENTE ALLO SCADERE) ---
-    if st.session_state.cached_live_eval is None:
+    # --- PULSANTE DEDICATO PER IL VERDETTO LIVE (X1 CHECK) ---
+    st.markdown("### ⚡ ACTION REQUIRED")
+    if st.button("🔍 Check Next Step (X1)"):
         current_dir = st.session_state.cached_direction
         real_check = get_live_candle_outcome(st.session_state.cached_asset_api, current_dir)
         
@@ -258,14 +258,15 @@ if st.session_state.signal_active:
             "direction": current_dir
         }
 
-    eval_data = st.session_state.cached_live_eval
-
-    st.markdown(f"""
-    <div class="martingale-live-box">
-        <h4>🔄 LIVE CANDLE CLOSE VERDICT (X1 CHECK)</h4>
-        <p><b>Real-time First Attempt Outcome:</b> <b>{eval_data['outcome']}</b></p>
-        <p style="font-size: 16px; margin-top: 10px;">{eval_data['decision']}</p>
-        <p><b>Required Direction:</b> <b>{eval_data['direction']}</b></p>
-        <p><b>Analysis Advice:</b> {eval_data['advice']}</p>
-    </div>
-    """, unsafe_allow_html=True)
+    # Mostra il box del verdetto non appena clicchi il pulsante
+    if st.session_state.cached_live_eval is not None:
+        eval_data = st.session_state.cached_live_eval
+        st.markdown(f"""
+        <div class="martingale-live-box">
+            <h4>🔄 LIVE CANDLE CLOSE VERDICT (X1 CHECK)</h4>
+            <p><b>Real-time First Attempt Outcome:</b> <b>{eval_data['outcome']}</b></p>
+            <p style="font-size: 16px; margin-top: 10px;">{eval_data['decision']}</p>
+            <p><b>Required Direction:</b> <b>{eval_data['direction']}</b></p>
+            <p><b>Analysis Advice:</b> {eval_data['advice']}</p>
+        </div>
+        """, unsafe_allow_html=True)
