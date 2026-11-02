@@ -59,7 +59,7 @@ def get_live_candle_outcome(ticker, signal_direction):
         opens = quotes['open']
         closes = quotes['close']
         
-mathrm_open = [o for o in opens if o is not None]
+        m_open = [o for o in opens if o is not None]
         m_close = [c for c in closes if c is not None]
         
         if len(m_open) > 0 and len(m_close) > 0:
@@ -75,7 +75,6 @@ mathrm_open = [o for o in opens if o is not None]
     except Exception:
         pass
     
-    # Fallback sicuro basato su trend casuale se la connessione fallisce temporaneamente
     return None
 
 # Funzione per calcolare le sessioni di mercato attive (basata su orario UTC)
@@ -180,7 +179,7 @@ if st.button("🚀 Run High-Precision Analysis"):
         direzioni = ["BUY 🟢", "SELL 🔴"]
         st.session_state.cached_direction = rnd.choice(direzioni)
         st.session_state.cached_time = get_next_candle_time(tf_seconds)
-        st.session_state.cached_live_eval = None  # Resetta il riscontro live per la nuova candela
+        st.session_state.cached_live_eval = None
         
         if tf_choice in ["M15 (900s)", "M10 (600s)"]:
             st.session_state.cached_win_rate = "88.5% - 91.0%"
@@ -238,7 +237,6 @@ if st.button("🚀 Run High-Precision Analysis"):
             if real_check is not None:
                 is_win, c_open, c_close = real_check
             else:
-                # Fallback di sicurezza se l'API non risponde
                 is_win = False
             
             if is_win:
@@ -246,7 +244,6 @@ if st.button("🚀 Run High-Precision Analysis"):
                 decision_banner = "🎉 **ESITO: VINTO REALE!** Nessun bisogno di recupero."
                 advice_text = f"La candela ha chiuso correttamente nella direzione prevista ({current_dir}). Il ciclo si conclude in profitto."
             else:
-                # Se è LOSS reale, verifica se conviene il recupero a X1
                 live_seed = hash(selected_asset + tf_choice + str(datetime.now().minute))
                 live_rnd = random.Random(live_seed)
                 is_conviene_x1 = live_rnd.random() > 0.30
