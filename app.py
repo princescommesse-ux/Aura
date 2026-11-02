@@ -26,7 +26,6 @@ st.markdown(
 )
 
 st.title("⚡ AURA PRO FOREX PANEL ⚡")
-st.write("Professional High-Precision Trading Assistant - Elite Top 10 Assets.")
 
 # Top 10 Elite Currency Pairs for Pocket Option
 assets = [
@@ -34,9 +33,9 @@ assets = [
     "USD/CHF", "GBP/JPY", "EUR/JPY", "EUR/GBP", "AUD/JPY"
 ]
 
-selected_asset = st.selectbox("Select Currency Pair (Top 10)", assets)
+selected_asset = st.selectbox("Select Currency Pair", assets)
 
-st.markdown("### ⏰ Select Strategic Timeframe")
+st.markdown("### ⏰ Timeframe")
 
 scadenze = {
     "M1 (60s)": 60,
@@ -115,7 +114,6 @@ if st.button("🚀 Run High-Precision Analysis"):
         seed_val = hash(selected_asset + tf_choice + str(datetime.now().minute // 5))
         rnd = random.Random(seed_val)
         
-        # Sostituito il tondo verde con la freccia verde verso l'alto tutto in uno
         direzioni = ["BUY 🟢", "SELL 🔴"]
         st.session_state.cached_direction = rnd.choice(direzioni)
         st.session_state.cached_time = get_next_candle_time(tf_seconds)
