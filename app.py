@@ -210,61 +210,62 @@ if st.session_state.signal_active:
     """)
 
     st.markdown("### ⏳ Current Candle Countdown")
-    placeholder = st.empty()
     
+    # Calcoliamo i secondi mancanti in tempo reale
     initial_left = get_seconds_to_next_candle(st.session_state.cached_tf_seconds)
-
-    # Countdown loop in tempo reale
-    for remaining in range(initial_left, 0, -1):
-        mins, secs = divmod(remaining, 60)
-        time_format = f"{mins:02d}:{secs:02d}"
-        placeholder.markdown(f'<div class="countdown-box">⏱️ {time_format}</div>', unsafe_allow_html=True)
-        time.sleep(1)
-
-    placeholder.markdown('<div class="countdown-box">⏱️ 00:00</div>', unsafe_allow_html=True)
     
-    # --- PULSANTE DEDICATO PER IL VERDETTO LIVE (X1 CHECK) ---
-    st.markdown("### ⚡ ACTION REQUIRED")
-    if st.button("🔍 Check Next Step (X1)"):
-        current_dir = st.session_state.cached_direction
-        real_check = get_live_candle_outcome(st.session_state.cached_asset_api, current_dir)
-        
-        if real_check is not None:
-            is_win, c_open, c_close = real_check
-        else:
-            is_win = False
-        
-        if is_win:
-            outcome_text = "🟢 1st ATTEMPT: WIN (ITM)"
-            decision_banner = "🎉 **RESULT: WIN!** Target reached successfully."
-            advice_text = f"The candle closed successfully in our favor ({current_dir}). Cycle completed with profit."
-        else:
-            live_seed = hash(st.session_state.cached_asset_api + st.session_state.cached_tf_choice + str(time.time()))
-            live_rnd = random.Random(live_seed)
-            is_conviene_x1 = live_rnd.random() > 0.30
-            
-            outcome_text = "🔴 1st ATTEMPT: LOSS (OTM)"
-            if is_conviene_x1:
-                decision_banner = f"✅ **VERDICT: RECOMMENDED TO ENTER X1 ({current_dir})**"
-                advice_text = f"Market structure shows strong rejection on the key level. High probability setup to recover at X1 maintaining direction {current_dir}."
-            else:
-                decision_banner = "❌ **VERDICT: STAND ASIDE / SKIP TURN**"
-                advice_text = "Choppy price action detected after candle close. Avoid entering X1 to protect capital."
-        
-        st.session_state.cached_live_eval = {
-            "outcome": outcome_text,
-            "decision": decision_banner,
-            "advice": advice_text,
-            "direction": current_dir
-        }
+    mins, secs = divmod(initial_left, 60)
+    st.markdown(f'<div class="countdown-box">⏱️ {mins:02d}:{secs:02d}</div>', unsafe_allow_html=True)
+    
+    # Mostra un pulsante per aggiornare la pagina e mantenere il timer vivo
+    if st.button("🔄 Refresh Timer"):
+        st.rerun()
 
-    # Mostra il box del verdetto non appena clicchi il pulsante
+    # --- CONTROLLO ULTIMO MINUTO (ATTIVO SOLO NEGLI ULTIMI 60 SECONDI) ---
+    if initial_left <= 60:
+        st.markdown("### ⚡ LAST MINUTE CHECK")
+        if st.button("🔍 Check Market & X1 Verdict"):
+            current_dir = st.session_state.cached_direction
+            real_check = get_live_candle_outcome(st.session_state.cached_asset_api, current_dir)
+            
+            if real_check is not None:
+                is_win, c_open, c_close = real_check
+            else:
+                is_win = False
+            
+            if is_win:
+                outcome_text = "🟢 1st ATTEMPT: WIN (ITM)"
+                decision_banner = "🎉 **RESULT: WIN!** Target reached successfully."
+                advice_text = f"The candle closed/closing successfully in our favor ({current_dir}). Cycle completed with profit."
+            else:
+                live_seed = hash(st.session_state.cached_asset_api + st.session_state.cached_tf_choice + str(datetime.now().minute))
+                live_rnd = random.Random(live_seed)
+                is_conviene_x1 = live_rnd.random() > 0.30
+                
+                outcome_text = "🔴 1st ATTEMPT: LOSS (OTM)"
+                if is_conviene_x1:
+                    decision_banner = f"✅ **VERDICT: RECOMMENDED TO ENTER X1 ({current_dir})**"
+                    advice_text = f"Market structure shows strong rejection on the key level. High probability setup to recover at X1 maintaining direction {current_dir}."
+                else:
+                    decision_banner = "❌ **VERDICT: STAND ASIDE / SKIP TURN**"
+                    advice_text = "Choppy price action detected. Avoid entering X1 to protect capital."
+            
+            st.session_state.cached_live_eval = {
+                "outcome": outcome_text,
+                "decision": decision_banner,
+                "advice": advice_text,
+                "direction": current_dir
+            }
+    else:
+        st.info("💡 The 'Check Market & X1 Verdict' button will automatically appear during the last minute (under 60s) of the candle.")
+
+    # Mostra il box del verdetto se è stato generato
     if st.session_state.cached_live_eval is not None:
         eval_data = st.session_state.cached_live_eval
         st.markdown(f"""
         <div class="martingale-live-box">
-            <h4>🔄 LIVE CANDLE CLOSE VERDICT (X1 CHECK)</h4>
-            <p><b>Real-time First Attempt Outcome:</b> <b>{eval_data['outcome']}</b></p>
+            <h4>🔄 REAL-TIME CANDLE VERDICT (X1 CHECK)</h4>
+            <p><b>Real-time Attempt Outcome:</b> <b>{eval_data['outcome']}</b></p>
             <p style="font-size: 16px; margin-top: 10px;">{eval_data['decision']}</p>
             <p><b>Required Direction:</b> <b>{eval_data['direction']}</b></p>
             <p><b>Analysis Advice:</b> {eval_data['advice']}</p>
