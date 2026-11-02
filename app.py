@@ -20,7 +20,6 @@ st.markdown(
     .stButton>button:hover { background-color: #333333; color: #ffffff; border-color: #00ffcc; }
     .countdown-box { font-size: 24px; font-weight: bold; color: #00ffcc; text-align: center; background-color: #1f1f1f; padding: 10px; border-radius: 8px; border: 1px solid #333333; }
     .market-badge { background-color: #1f1f1f; padding: 8px 12px; border-radius: 6px; border: 1px solid #333333; font-size: 14px; margin-bottom: 15px; text-align: center; }
-    .payout-box { background-color: #1a1a1a; padding: 10px; border-radius: 6px; border: 1px solid #333333; font-size: 14px; margin-bottom: 15px; }
     </style>
     """, 
     unsafe_allow_html=True,
@@ -45,19 +44,8 @@ assets_dict = {
 selected_display = st.selectbox("Select Currency Pair", list(assets_dict.keys()))
 selected_asset = assets_dict[selected_display]
 
-# Funzione per simulare i payout live simili a Pocket Option (es. tra 82% e 90%)
-def get_live_payouts(asset_dict):
-    payouts = {}
-    rnd = random.Random(datetime.now().minute // 2)
-    for display_name, code in asset_dict.items():
-        payouts[code] = f"+{rnd.randint(82, 90)}%"
-    return payouts
-
-live_payouts = get_live_payouts(assets_dict)
-current_payout = live_payouts[selected_asset]
-
-# Mostra il payout in tempo reale dell'asset selezionato con le bandiere
-st.markdown(f'<div class="payout-box">📊 <b>Pocket Option Payout ({selected_display}):</b> <span style="color: #00ffcc; font-weight: bold;">{current_payout}</span></div>', unsafe_allow_html=True)
+# Campo per inserire la percentuale di payout vista in tempo reale su Pocket Option
+live_payout = st.text_input("Pocket Option Live Payout (%)", value="85%")
 
 # Funzione per calcolare le sessioni di mercato attive (basata su orario UTC)
 def get_market_sessions():
@@ -187,7 +175,7 @@ if st.button("🚀 Run High-Precision Analysis"):
             st.session_state.cached_win_rate, 
             st.session_state.cached_confidence, 
             st.session_state.cached_time,
-            current_payout
+            live_payout
         )
 
     with st.spinner(f"Processing high-precision multi-timeframe models for {selected_display}..."):
@@ -196,7 +184,7 @@ if st.button("🚀 Run High-Precision Analysis"):
         # Professional English Output with clean Markdown layout and double diamonds
         st.markdown("### 💎 SIGNAL RESULTS 💎")
         st.markdown(f"""
-        * **Asset:** `{selected_display}` (Payout: `{current_payout}`)
+        * **Asset:** `{selected_display}` (Payout: `{live_payout}`)
         * **Timeframe:** `{tf_choice}`
         * **Signal Direction:** **{st.session_state.cached_direction}**
         * **Entry Time (Candle Close):** `{st.session_state.cached_time}`
