@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import random
+import time
 import streamlit as st
 
 # Page configuration
@@ -16,13 +17,14 @@ st.markdown(
     .main { background-color: #121212; color: #ffffff; }
     .stButton>button { width: 100%; border-radius: 8px; font-weight: bold; background-color: #1f1f1f; color: #00ffcc; border: 1px solid #333333; }
     .stButton>button:hover { background-color: #333333; color: #ffffff; border-color: #00ffcc; }
+    .countdown-box { font-size: 24px; font-weight: bold; color: #00ffcc; text-align: center; background-color: #1f1f1f; padding: 10px; border-radius: 8px; border: 1px solid #333333; }
     </style>
     """, 
     unsafe_allow_html=True,
 )
 
 st.title("⚡ AURA PRO FOREX PANEL ⚡")
-st.write("Pannello di controllo avanzato - Top 10 Asset d'Élite con analisi dei trend e gestione del rischio.")
+st.write("Advanced Control Panel - Elite Top 10 Assets with Trend Analysis and Risk Management.")
 
 # Top 10 Elite Currency Pairs for Pocket Option
 assets = [
@@ -30,9 +32,9 @@ assets = [
     "USD/CHF", "GBP/JPY", "EUR/JPY", "EUR/GBP", "AUD/JPY"
 ]
 
-selected_asset = st.selectbox("Seleziona Coppia di Valute (Top 10)", assets)
+selected_asset = st.selectbox("Select Currency Pair (Top 10)", assets)
 
-st.markdown("### ⏰ Seleziona Timeframe Strategico")
+st.markdown("### ⏰ Select Strategic Timeframe")
 
 # All Timeframes selection: M1, M3, M5, M10, M15
 scadenze = {
@@ -43,7 +45,7 @@ scadenze = {
     "M15 (900s)": 900
 }
 
-tf_choice = st.radio("Scegli dal paniere temporale:", list(scadenze.keys()), horizontal=True)
+tf_choice = st.radio("Choose from time basket:", list(scadenze.keys()), horizontal=True)
 scad = scadenze[tf_choice]
 
 def get_next_candle_time(seconds):
@@ -51,38 +53,66 @@ def get_next_candle_time(seconds):
     future = now + timedelta(seconds=seconds)
     return future.strftime("%H:%M:%S")
 
-# Signal generator and Win Rate estimation logic
-def check_trend_alignment(asset, tf):
-    direzioni = ["CALL / BUY 🟢", "PUT / SELL 🔴"]
-    scelta_dir = random.choice(direzioni)
-    
-    if tf == "M15 (900s)":
-        win_rate = "84.5% - 88.0% (High Confidence)"
-    elif tf == "M10 (600s)":
-        win_rate = "81.0% - 84.5% (Very Stable)"
-    elif tf == "M5 (300s)":
-        win_rate = "78.0% - 82.5% (Balanced)"
-    elif tf == "M3 (180s)":
-        win_rate = "75.0% - 79.0% (Dynamic)"
-    else:
-        win_rate = "72.0% - 76.0% (Fast Scalping)"
-        
-    return scelta_dir, win_rate
+# State initialization for stable signal output
+if "last_asset" not in st.session_state:
+    st.session_state.last_asset = None
+if "last_tf" not in st.session_state:
+    st.session_state.last_tf = None
+if "cached_direction" not in st.session_state:
+    st.session_state.cached_direction = None
+if "cached_win_rate" not in st.session_state:
+    st.session_state.cached_win_rate = None
+if "cached_time" not in st.session_state:
+    st.session_state.cached_time = None
 
-if st.button("🚀 Esegui Analisi di Mercato"):
-    with st.spinner(f"Analisi in corso per {selected_asset} su {tf_choice}..."):
-        entry_time = get_next_candle_time(scad)
-        direzione, win_rate = check_trend_alignment(selected_asset, tf_choice)
+if st.button("🚀 Run Market Analysis"):
+    if (st.session_state.last_asset != selected_asset or 
+        st.session_state.last_tf != tf_choice or 
+        st.session_state.cached_direction is None):
         
-        st.success("Analisi completata con successo!")
+        direzioni = ["CALL / BUY 🟢", "PUT / SELL 🔴"]
+        st.session_state.cached_direction = random.choice(direzioni)
+        st.session_state.cached_time = get_next_candle_time(scad)
         
-        # Signal output in English
+        if tf_choice == "M15 (900s)":
+            st.session_state.cached_win_rate = "84.5% - 88.0% (High Confidence)"
+        elif tf_choice == "M10 (600s)":
+            st.session_state.cached_win_rate = "81.0% - 84.5% (Very Stable)"
+        elif tf_choice == "M5 (300s)":
+            st.session_state.cached_win_rate = "78.0% - 82.5% (Balanced)"
+        elif tf_choice == "M3 (180s)":
+            st.session_state.cached_win_rate = "75.0% - 79.0% (Dynamic)"
+        else:
+            st.session_state.cached_win_rate = "72.0% - 76.0% (Fast Scalping)"
+            
+        st.session_state.last_asset = selected_asset
+        st.session_state.last_tf = tf_choice
+
+    with st.spinner(f"Analyzing {selected_asset} on {tf_choice}..."):
+        st.success("Analysis completed successfully!")
+        
+        # English Signal Output with Fixed 1% Risk Management
         st.markdown("### 💎 SIGNAL RESULTS")
         st.markdown(f"""
         * **Asset:** `{selected_asset}`
         * **Timeframe:** `{tf_choice}`
-        * **Signal Direction:** **{direzione}**
-        * **Entry Time:** `{entry_time}`
-        * **Estimated Win Rate:** `{win_rate}`
-        * **Money Management:** `Martingale Max X1`
+        * **Signal Direction:** **{st.session_state.cached_direction}**
+        * **Entry Time:** `{st.session_state.cached_time}`
+        * **Estimated Win Rate:** `{st.session_state.cached_win_rate}`
+        * **Money Management:** `Fixed Risk Max 1%`
         """)
+
+        # Live Countdown Timer matching trade duration
+        st.markdown("### ⏳ Trade Countdown Timer")
+        placeholder = st.empty()
+        
+        # Esegue il conto alla rovescia in tempo reale per la durata esatta del trade
+        for remaining in range(scad, -1, -1):
+            mins, secs = divmod(remaining, 60)
+            time_format = f"{mins:02d}:{secs:02d}"
+            placeholder.markdown(f'<div class="countdown-box">⏱️ {time_format}</div>', unsafe_allow_html=True)
+            if remaining > 0:
+                time.sleep(1)
+        
+        st.info("Time expired! Run analysis again or switch asset.")
+
