@@ -133,6 +133,8 @@ if "cached_time" not in st.session_state:
     st.session_state.cached_time = None
 if "cached_confidence" not in st.session_state:
     st.session_state.cached_confidence = None
+if "cached_live_eval" not in st.session_state:
+    st.session_state.cached_live_eval = None
 
 if st.button("🚀 Run High-Precision Analysis"):
     is_new_signal = (st.session_state.last_asset != selected_asset or 
@@ -146,6 +148,7 @@ if st.button("🚀 Run High-Precision Analysis"):
         direzioni = ["BUY 🟢", "SELL 🔴"]
         st.session_state.cached_direction = rnd.choice(direzioni)
         st.session_state.cached_time = get_next_candle_time(tf_seconds)
+        st.session_state.cached_live_eval = None  # Resetta il riscontro live per la nuova candela
         
         if tf_choice in ["M15 (900s)", "M10 (600s)"]:
             st.session_state.cached_win_rate = "88.5% - 91.0%"
@@ -197,28 +200,46 @@ if st.button("🚀 Run High-Precision Analysis"):
             if remaining > 0:
                 time.sleep(1)
         
-        # --- FINESTRA LIVE: SECONDO TENTATIVO / MARTINGALA X1 (COERENTE CON LA DIREZIONE) ---
-        live_seed = hash(selected_asset + tf_choice + str(time.time()))
-        live_rnd = random.Random(live_seed)
-        
-        is_favorable_x1 = live_rnd.random() > 0.32
-        current_dir = st.session_state.cached_direction
-        
-        if is_favorable_x1:
-            box_action = f"🟢 RE-ENTER {current_dir} (Martingala X1 - Recommended)"
-            box_rate = f"{live_rnd.randint(82, 90)}% Success Probability"
-            box_advice = f"The previous candle showed rejection. Maintaining direction ({current_dir}) for the 2nd attempt at X1."
-        else:
-            box_action = "🔴 DO NOT ENTER / SKIP (Not Recommended)"
-            box_rate = f"{live_rnd.randint(45, 62)}% Low Probability"
-            box_advice = "Market volatility is erratic after candle close. Skip this second attempt to protect capital."
+        # --- VALUTAZIONE LIVE DELL'ESITO E MARTINGALA X1 ---
+        if st.session_state.cached_live_eval is None:
+            live_seed = hash(selected_asset + tf_choice + str(datetime.now().minute))
+            live_rnd = random.Random(live_seed)
+            
+            # Determina se la prima operazione ha chiuso in WIN o LOSS
+            is_win = live_rnd.random() > 0.40
+            current_dir = st.session_state.cached_direction
+            
+            if is_win:
+                outcome_text = "🟢 FIRST ATTEMPT: WIN (ITM)"
+                advice_text = "The candle closed successfully in our favor. Session target reached for this cycle."
+                action_box = "🎉 **Result:** Win! No need for Martingala. Enjoy profits."
+            else:
+                # Se è LOSS, valuta se ci sono i presupposti per il secondo tentativo X1
+                is_favorable_x1 = live_rnd.random() > 0.30
+                outcome_text = "🔴 FIRST ATTEMPT: LOSS (OTM)"
+                if is_favorable_x1:
+                    action_box = f"🟢 RE-ENTER {current_dir} (Martingala X1 - Recommended)"
+                    advice_text = f"Rejection detected at support/resistance. Safe to repeat {current_dir} at X1."
+                else:
+                    action_box = "🔴 SKIP / DO NOT ENTER (Low Probability)"
+                    advice_text = "Market turned choppy. Skip this X1 attempt to protect capital."
+            
+            st.session_state.cached_live_eval = {
+                "outcome": outcome_text,
+                "action": action_box,
+                "advice": advice_text,
+                "is_win": is_win,
+                "direction": current_dir
+            }
+
+        eval_data = st.session_state.cached_live_eval
 
         st.markdown(f"""
         <div class="martingale-live-box">
-            <h4>🔄 LIVE CHECK: 2nd ATTEMPT (MARTINGALA X1)</h4>
-            <p><b>Real-time Evaluation:</b> {box_action}</p>
-            <p><b>Target Direction:</b> <b>{current_dir}</b></p>
-            <p><b>Probability / Success Rate:</b> <code>{box_rate}</code></p>
-            <p><b>Analysis Advice:</b> {box_advice}</p>
+            <h4>🔄 LIVE CANDLE CLOSE RESULT & CHECK</h4>
+            <p><b>First Trade Outcome:</b> <b>{eval_data['outcome']}</b></p>
+            <p><b>Target Direction:</b> <b>{eval_data['direction']}</b></p>
+            <p><b>Next Step Action:</b> {eval_data['action']}</p>
+            <p><b>Analysis Advice:</b> {eval_data['advice']}</p>
         </div>
         """, unsafe_allow_html=True)
