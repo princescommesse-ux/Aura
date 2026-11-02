@@ -36,7 +36,7 @@ selected_asset = st.selectbox("Select Currency Pair (Top 10)", assets)
 
 st.markdown("### ⏰ Select Strategic Timeframe")
 
-# All Timeframes selection: M1, M3, M5, M10, M15
+# All Timeframes selection: M1, M3, M5, M10, M15 (durata in secondi)
 scadenze = {
     "M1 (60s)": 60,
     "M3 (180s)": 180,
@@ -46,11 +46,20 @@ scadenze = {
 }
 
 tf_choice = st.radio("Choose from time basket:", list(scadenze.keys()), horizontal=True)
-scad = scadenze[tf_choice]
+tf_seconds = scadenze[tf_choice]
+
+def get_seconds_to_next_candle(seconds):
+    # Calcola i secondi esatti mancanti alla chiusura della candela corrente (sincronizzato con l'orologio di sistema)
+    now = datetime.now()
+    total_seconds_today = now.hour * 3600 + now.minute * 60 + now.second + now.microsecond / 1_000_000
+    remainder = total_seconds_today % seconds
+    seconds_left = int(seconds - remainder)
+    return max(1, seconds_left)
 
 def get_next_candle_time(seconds):
     now = datetime.now()
-    future = now + timedelta(seconds=seconds)
+    secs_left = get_seconds_to_next_candle(seconds)
+    future = now + timedelta(seconds=secs_left)
     return future.strftime("%H:%M:%S")
 
 # State initialization for stable signal output
@@ -72,7 +81,7 @@ if st.button("🚀 Run Market Analysis"):
         
         direzioni = ["CALL / BUY 🟢", "PUT / SELL 🔴"]
         st.session_state.cached_direction = random.choice(direzioni)
-        st.session_state.cached_time = get_next_candle_time(scad)
+        st.session_state.cached_time = get_next_candle_time(tf_seconds)
         
         if tf_choice == "M15 (900s)":
             st.session_state.cached_win_rate = "84.5% - 88.0% (High Confidence)"
@@ -97,22 +106,24 @@ if st.button("🚀 Run Market Analysis"):
         * **Asset:** `{selected_asset}`
         * **Timeframe:** `{tf_choice}`
         * **Signal Direction:** **{st.session_state.cached_direction}**
-        * **Entry Time:** `{st.session_state.cached_time}`
+        * **Entry Time (Candle Close):** `{st.session_state.cached_time}`
         * **Estimated Win Rate:** `{st.session_state.cached_win_rate}`
         * **Money Management:** `Fixed Risk Max 1%`
         """)
 
-        # Live Countdown Timer matching trade duration
-        st.markdown("### ⏳ Trade Countdown Timer")
+        # Live Synchronized Candle Countdown Timer
+        st.markdown("### ⏳ Current Candle Countdown")
         placeholder = st.empty()
         
-        # Esegue il conto alla rovescia in tempo reale per la durata esatta del trade
-        for remaining in range(scad, -1, -1):
+        # Calcola i secondi sincronizzati con la candela in corso
+        initial_left = get_seconds_to_next_candle(tf_seconds)
+        
+        for remaining in range(initial_left, -1, -1):
             mins, secs = divmod(remaining, 60)
             time_format = f"{mins:02d}:{secs:02d}"
             placeholder.markdown(f'<div class="countdown-box">⏱️ {time_format}</div>', unsafe_allow_html=True)
             if remaining > 0:
                 time.sleep(1)
         
-        st.info("Time expired! Run analysis again or switch asset.")
+        st.info("Candle closed! Run analysis for the new candle.")
 
