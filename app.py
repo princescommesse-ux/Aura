@@ -109,19 +109,17 @@ if st.button("🚀 Run High-Precision Analysis"):
     with st.spinner(f"Processing high-precision multi-timeframe models for {selected_asset}..."):
         st.success("Elite analysis generated successfully!")
         
-        # Professional English Output with fixed formatting
+        # Professional English Output with clean Markdown layout
         st.markdown("### 💎 ELITE SIGNAL RESULTS")
         st.markdown(f"""
-        <div class="metrics-box">
-        - **Asset:** `{selected_asset}`<br>
-        - **Timeframe:** `{tf_choice}`<br>
-        - **Signal Direction:** **{st.session_state.cached_direction}**<br>
-        - **Entry Time (Candle Close):** `{st.session_state.cached_time}`<br>
-        - **Estimated Success Rate:** `{st.session_state.cached_win_rate}`<br>
-        - **Confluence Status:** `{st.session_state.cached_confidence}`<br>
-        - **Money Management:** `Fixed Risk Max 1%`
-        </div>
-        """, unsafe_allow_html=True)
+        * **Asset:** `{selected_asset}`
+        * **Timeframe:** `{tf_choice}`
+        * **Signal Direction:** **{st.session_state.cached_direction}**
+        * **Entry Time (Candle Close):** `{st.session_state.cached_time}`
+        * **Estimated Success Rate:** `{st.session_state.cached_win_rate}`
+        * **Confluence Status:** `{st.session_state.cached_confidence}`
+        * **Money Management:** `Fixed Risk Max 1%`
+        """)
 
         # Synchronized Live Countdown Timer matching candle close
         st.markdown("### ⏳ Current Candle Countdown")
@@ -137,7 +135,6 @@ if st.button("🚀 Run High-Precision Analysis"):
                 time.sleep(1)
         
         st.info("Candle closed! Please re-run analysis for the next market cycle.")
-
 
 
 
