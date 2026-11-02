@@ -211,19 +211,17 @@ if st.session_state.signal_active:
 
     st.markdown("### ⏳ Current Candle Countdown")
     
-    # Calcoliamo i secondi mancanti in tempo reale
     initial_left = get_seconds_to_next_candle(st.session_state.cached_tf_seconds)
-    
     mins, secs = divmod(initial_left, 60)
     st.markdown(f'<div class="countdown-box">⏱️ {mins:02d}:{secs:02d}</div>', unsafe_allow_html=True)
     
-    # Mostra un pulsante per aggiornare la pagina e mantenere il timer vivo
+    # Pulsante per aggiornare il timer manualmente
     if st.button("🔄 Refresh Timer"):
         st.rerun()
 
-    # --- CONTROLLO ULTIMO MINUTO (ATTIVO SOLO NEGLI ULTIMI 60 SECONDI) ---
+    # --- CONTROLLO ESATTAMENTE NELL'ULTIMO MINUTO (<= 60 SECONDI) ---
     if initial_left <= 60:
-        st.markdown("### ⚡ LAST MINUTE CHECK")
+        st.markdown("### ⚡ LAST MINUTE CHECK (FINAL 60s)")
         if st.button("🔍 Check Market & X1 Verdict"):
             current_dir = st.session_state.cached_direction
             real_check = get_live_candle_outcome(st.session_state.cached_asset_api, current_dir)
@@ -236,7 +234,7 @@ if st.session_state.signal_active:
             if is_win:
                 outcome_text = "🟢 1st ATTEMPT: WIN (ITM)"
                 decision_banner = "🎉 **RESULT: WIN!** Target reached successfully."
-                advice_text = f"The candle closed/closing successfully in our favor ({current_dir}). Cycle completed with profit."
+                advice_text = f"The price is currently moving in our favor ({current_dir}). Market conditions are positive."
             else:
                 live_seed = hash(st.session_state.cached_asset_api + st.session_state.cached_tf_choice + str(datetime.now().minute))
                 live_rnd = random.Random(live_seed)
@@ -245,10 +243,10 @@ if st.session_state.signal_active:
                 outcome_text = "🔴 1st ATTEMPT: LOSS (OTM)"
                 if is_conviene_x1:
                     decision_banner = f"✅ **VERDICT: RECOMMENDED TO ENTER X1 ({current_dir})**"
-                    advice_text = f"Market structure shows strong rejection on the key level. High probability setup to recover at X1 maintaining direction {current_dir}."
+                    advice_text = f"Price is currently against us, but strong rejection is detected on the level. Good setup to enter X1 maintaining direction {current_dir}."
                 else:
                     decision_banner = "❌ **VERDICT: STAND ASIDE / SKIP TURN**"
-                    advice_text = "Choppy price action detected. Avoid entering X1 to protect capital."
+                    advice_text = "Unfavorable price action detected in the final seconds. Avoid entering X1 to protect capital."
             
             st.session_state.cached_live_eval = {
                 "outcome": outcome_text,
@@ -257,7 +255,7 @@ if st.session_state.signal_active:
                 "direction": current_dir
             }
     else:
-        st.info("💡 The 'Check Market & X1 Verdict' button will automatically appear during the last minute (under 60s) of the candle.")
+        st.info("💡 The 'Check Market & X1 Verdict' button will unlock automatically during the last 60 seconds of the trade.")
 
     # Mostra il box del verdetto se è stato generato
     if st.session_state.cached_live_eval is not None:
