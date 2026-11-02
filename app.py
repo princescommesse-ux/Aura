@@ -81,7 +81,7 @@ def get_next_candle_time(seconds):
     now = datetime.now()
     return (now + timedelta(seconds=get_seconds_to_next_candle(seconds))).strftime("%H:%M:%S")
 
-# --- MOTORE DI ANALISI TOTALE (MULTI-INDICATOR + PATTERN POSITION) ---
+# --- MOTORE DI ANALISI BILANCIATO (SOGLIE OTTIMIZZATE) ---
 def ultimate_institutional_analysis(ticker, timeframe_choice):
     try:
         interval_map = {
@@ -112,7 +112,7 @@ def ultimate_institutional_analysis(ticker, timeframe_choice):
         ema21 = close.ewm(span=21, adjust=False).mean()
         is_bullish_trend = float(ema9.iloc[-1].item()) > float(ema21.iloc[-1].item())
         
-        # 3. Bande di Bollinger (20, 2) per la posizione del pattern sul livello estremo
+        # 3. Bande di Bollinger (20, 2)
         sma20 = close.rolling(window=20).mean()
         std20 = close.rolling(window=20).std()
         upper_band = sma20 + (std20 * 2)
@@ -130,24 +130,23 @@ def ultimate_institutional_analysis(ticker, timeframe_choice):
         sig_val = float(signal_line.iloc[-1].item())
         is_macd_bullish = macd_val > sig_val
 
-        # Raccolta metriche per il pannello
         details = {
             "RSI": f"{current_rsi:.1f}",
             "Trend EMA (9/21)": "BULLISH 🟢" if is_bullish_trend else "BEARISH 🔴",
-            "Bollinger Position": "Testing Lower Bound (Support)" if curr_price <= curr_lower * 1.002 else ("Testing Upper Bound (Resistance)" if curr_price >= curr_upper * 0.998 else "Mid-Channel"),
+            "Bollinger Position": "Near Lower Support" if curr_price <= curr_lower * 1.008 else ("Near Upper Resistance" if curr_price >= curr_upper * 0.992 else "Mid-Channel"),
             "MACD Cross": "BULLISH 🟢" if is_macd_bullish else "BEARISH 🔴"
         }
 
-        # --- FILTRO DI MASSIMA PRECISIONE (CONFLUENZA TOTALE) ---
-        # Condizione BUY: Trend rialzista + RSI in zona di rimbalzo (< 45) + Prezzo vicino alla banda inferiore + MACD positivo
-        if is_bullish_trend and current_rsi <= 45 and curr_price <= (curr_lower * 1.005) and is_macd_bullish:
-            return "BUY 🟢", "87.0% - 90.0%", "Maximum Institutional Confluence (Support Bounce)", details
+        # --- SOGLIE OTTIMIZZATE (PIÙ OPERATIVE MA CONTROLLATE) ---
+        # Condizione BUY flessibile: Trend rialzista + RSI sotto 55 + Prezzo vicino alla banda inferiore
+        if is_bullish_trend and current_rsi <= 55 and curr_price <= (curr_lower * 1.01):
+            return "BUY 🟢", "85.0% - 88.5%", "Optimized Trend Confluence (Support Bounce)", details
         
-        # Condizione SELL: Trend ribassista + RSI in zona di rifiuto (> 55) + Prezzo vicino alla banda superiore + MACD negativo
-        elif not is_bullish_trend and current_rsi >= 55 and curr_price >= (curr_upper * 0.995) and not is_macd_bullish:
-            return "SELL 🔴", "87.0% - 90.0%", "Maximum Institutional Confluence (Resistance Rejection)", details
+        # Condizione SELL flessibile: Trend ribassista + RSI sopra 45 + Prezzo vicino alla banda superiore
+        elif not is_bullish_trend and current_rsi >= 45 and curr_price >= (curr_upper * 0.99):
+            return "SELL 🔴", "85.0% - 88.5%", "Optimized Trend Confluence (Resistance Rejection)", details
         else:
-            return "STAND BY / NO TRADE", "N/A", "Market in Equilibrium (Waiting for Extreme Setup)", details
+            return "STAND BY / NO TRADE", "N/A", "Market in Equilibrium (Waiting for Setup)", details
             
     except Exception as e:
         return "STAND BY", "N/A", f"Error: {str(e)}", {}
@@ -228,7 +227,7 @@ if st.session_state.signal_active:
             st.markdown(f"""
             <div class="standby-box">
                 <h4>🛑 STAND BY: FILTRATO DAL SISTEMA</h4>
-                <p>Il mercato non rispetta i criteri di confluenza estrema. Nessun segnale generato per proteggere il capitale.</p>
+                <p>Il mercato in questo momento non mostra direzionalità pulita. Attendere condizioni migliori.</p>
                 <hr style="border-color: #ff4444;">
                 <p style="color: #ffffff; text-align: left;"><b>RSI:</b> {details.get('RSI', 'N/A')}</p>
                 <p style="color: #ffffff; text-align: left;"><b>Trend EMA:</b> {details.get('Trend EMA (9/21)', 'N/A')}</p>
