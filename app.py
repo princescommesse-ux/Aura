@@ -129,7 +129,13 @@ if "cached_confidence" not in st.session_state:
     st.session_state.cached_confidence = None
 
 if st.button("🚀 Run High-Precision Analysis"):
-    seed_val = hash(selected_asset + tf_choice + str(datetime.now()))
+    # Fixato: usa il blocco temporale della candela come seed anziché l'orario al millisecondo.
+    # In questo modo, finché la candela è la stessa, il segnale rimane perfettamente stabile.
+    now = datetime.now()
+    total_secs = now.hour * 3600 + now.minute * 60 + now.second
+    candle_block_id = total_secs // tf_seconds
+    
+    seed_val = hash(selected_asset + tf_choice + str(candle_block_id))
     rnd = random.Random(seed_val)
     
     st.session_state.cached_direction = rnd.choice(["BUY 🟢", "SELL 🔴"])
@@ -177,7 +183,7 @@ if st.session_state.signal_active:
     
     initial_left = get_seconds_to_next_candle(st.session_state.cached_tf_seconds)
     
-    # Live Running Countdown (No page refresh needed)
+    # Timer con gestione dello stop a zero (nessun blocco anomalo)
     timer_html = f"""
     <div style="font-size: 28px; font-weight: bold; color: #00ffcc; text-align: center; background-color: #1f1f1f; padding: 15px; border-radius: 8px; border: 1px solid #333333;" id="countdown">
         Loading timer...
@@ -185,14 +191,17 @@ if st.session_state.signal_active:
     <script>
     var timeLeft = {initial_left};
     function updateTimer() {{
+        if (timeLeft <= 0) {{
+            document.getElementById("countdown").innerHTML = "⏰ CANDELA CHIUSA!";
+            document.getElementById("countdown").style.color = "#ff4444";
+            return;
+        }}
         var minutes = Math.floor(timeLeft / 60);
         var seconds = timeLeft % 60;
         minutes = minutes < 10 ? "0" + minutes : minutes;
         seconds = seconds < 10 ? "0" + seconds : seconds;
         document.getElementById("countdown").innerHTML = "⏱️ " + minutes + ":" + seconds;
-        if (timeLeft > 0) {{
-            timeLeft--;
-        }}
+        timeLeft--;
     }}
     setInterval(updateTimer, 1000);
     updateTimer();
