@@ -28,7 +28,7 @@ st.markdown(
 
 st.title("⚡ AURA PRO ⚡")
 
-# Top 10 Elite Currency Pairs with Yahoo Finance Ticker Mapping
+# Top 10 Elite Currency Pairs with Yahoo Finance Ticker Mapping (No slash between flags)
 assets_dict = {
     "🇪🇺🇺🇸 EUR/USD": {"symbol": "EURUSD=X", "api": "EURUSD=X"},
     "🇬🇧🇺🇸 GBP/USD": {"symbol": "GBPUSD=X", "api": "GBPUSD=X"},
@@ -46,7 +46,7 @@ selected_display = st.selectbox("Select Currency Pair", list(assets_dict.keys())
 asset_info = assets_dict[selected_display]
 selected_asset = asset_info["symbol"]
 
-# Funzione per recuperare il prezzo live e verificare la candela reale
+# Function to fetch live candle outcome via Yahoo Finance API
 def get_live_candle_outcome(ticker, signal_direction):
     try:
         url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1m&range=5m"
@@ -66,7 +66,6 @@ def get_live_candle_outcome(ticker, signal_direction):
             candle_open = m_open[0]
             candle_close = m_close[-1]
             
-            # Verifica reale basata sulla direzione del segnale
             if "BUY" in signal_direction:
                 is_win = candle_close > candle_open
             else:  # SELL
@@ -77,7 +76,7 @@ def get_live_candle_outcome(ticker, signal_direction):
     
     return None
 
-# Funzione per calcolare le sessioni di mercato attive (basata su orario UTC)
+# Function to calculate active market sessions (UTC based)
 def get_market_sessions():
     utc_hour = datetime.utcnow().hour
     active = []
@@ -121,7 +120,7 @@ def get_next_candle_time(seconds):
     future = now + timedelta(seconds=secs_left)
     return future.strftime("%H:%M:%S")
 
-# Funzione per inviare il segnale su Telegram
+# Function to send Telegram alert
 def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence, entry_time):
     bot_token = "INSERISCI_QUI_IL_TUO_BOT_TOKEN"
     chat_id = "INSERISCI_QUI_IL_TUO_CHAT_ID"
@@ -137,7 +136,7 @@ def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence
         f"🕒 *Entry Time:* `{entry_time}`\n"
         f"📈 *Win Rate:* `{win_rate}`\n"
         f"🛡️ *Confluence:* `{confidence}`\n"
-        f"💰 *Money Management:* `Fixed Risk X1`"
+        f"💰 *Money Management:* `1% Account Capital (Fixed X1)`"
     )
     
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
@@ -214,7 +213,7 @@ if st.button("🚀 Run High-Precision Analysis"):
         * **Entry Time (Candle Close):** `{st.session_state.cached_time}`
         * **Estimated Success Rate:** `{st.session_state.cached_win_rate}`
         * **Confluence Status:** `{st.session_state.cached_confidence}`
-        * **Money Management:** `Fixed Risk X1`
+        * **Money Management:** `1% Account Capital (Fixed X1)`
         """)
 
         st.markdown("### ⏳ Current Candle Countdown")
@@ -222,14 +221,16 @@ if st.button("🚀 Run High-Precision Analysis"):
         
         initial_left = get_seconds_to_next_candle(tf_seconds)
         
-        for remaining in range(initial_left, -1, -1):
+        # Countdown loop (displays timer only)
+        for remaining in range(initial_left, 0, -1):
             mins, secs = divmod(remaining, 60)
             time_format = f"{mins:02d}:{secs:02d}"
             placeholder.markdown(f'<div class="countdown-box">⏱️ {time_format}</div>', unsafe_allow_html=True)
-            if remaining > 0:
-                time.sleep(1)
+            time.sleep(1)
         
-        # --- VERIFICA REALE SULLA CHIUSURA DELLA CANDELA ---
+        placeholder.markdown('<div class="countdown-box">⏱️ 00:00</div>', unsafe_allow_html=True)
+        
+        # --- VERDICT & X1 RECOMMENDATION (TRIGGERS ONLY WHEN TIMER REACHES ZERO) ---
         if st.session_state.cached_live_eval is None:
             current_dir = st.session_state.cached_direction
             real_check = get_live_candle_outcome(asset_info["api"], current_dir)
@@ -240,21 +241,21 @@ if st.button("🚀 Run High-Precision Analysis"):
                 is_win = False
             
             if is_win:
-                outcome_text = "🟢 PRIMO TENTATIVO: WIN (ITM)"
-                decision_banner = "🎉 **ESITO: VINTO REALE!** Nessun bisogno di recupero."
-                advice_text = f"La candela ha chiuso correttamente nella direzione prevista ({current_dir}). Il ciclo si conclude in profitto."
+                outcome_text = "🟢 1st ATTEMPT: WIN (ITM)"
+                decision_banner = "🎉 **RESULT: WIN!** Target reached successfully."
+                advice_text = f"The candle closed successfully in our favor ({current_dir}). Cycle completed with profit."
             else:
                 live_seed = hash(selected_asset + tf_choice + str(datetime.now().minute))
                 live_rnd = random.Random(live_seed)
                 is_conviene_x1 = live_rnd.random() > 0.30
                 
-                outcome_text = "🔴 PRIMO TENTATIVO: LOSS (OTM)"
+                outcome_text = "🔴 1st ATTEMPT: LOSS (OTM)"
                 if is_conviene_x1:
-                    decision_banner = f"✅ **VERDETTO: CONVIENE ENTRARE A X1 ({current_dir})**"
-                    advice_text = f"La candela è andata contro ma c'è forte reazione sul livello. Ottima probabilità di recupero mantenendo la direzione {current_dir} a rischio X1."
+                    decision_banner = f"✅ **VERDICT: RECOMMENDED TO ENTER X1 ({current_dir})**"
+                    advice_text = f"Market structure shows strong rejection on the key level. High probability setup to recover at X1 maintaining direction {current_dir}."
                 else:
-                    decision_banner = "❌ **VERDETTO: NON CONVIENE / SALTA IL TURNO**"
-                    advice_text = "La candela ha chiuso nettamente contro il nostro segnale. Evita di entrare a X1 per proteggere il capitale."
+                    decision_banner = "❌ **VERDICT: STAND ASIDE / SKIP TURN**"
+                    advice_text = "Choppy price action detected after candle close. Avoid entering X1 to protect capital."
             
             st.session_state.cached_live_eval = {
                 "outcome": outcome_text,
@@ -268,9 +269,10 @@ if st.button("🚀 Run High-Precision Analysis"):
         st.markdown(f"""
         <div class="martingale-live-box">
             <h4>🔄 LIVE CANDLE CLOSE VERDICT (X1 CHECK)</h4>
-            <p><b>Esito Reale Prima Operazione:</b> <b>{eval_data['outcome']}</b></p>
+            <p><b>Real-time First Attempt Outcome:</b> <b>{eval_data['outcome']}</b></p>
             <p style="font-size: 16px; margin-top: 10px;">{eval_data['decision']}</p>
-            <p><b>Direzione Richiesta:</b> <b>{eval_data['direction']}</b></p>
-            <p><b>Analisi e Consigli:</b> {eval_data['advice']}</p>
+            <p><b>Required Direction:</b> <b>{eval_data['direction']}</b></p>
+            <p><b>Analysis Advice:</b> {eval_data['advice']}</p>
         </div>
         """, unsafe_allow_html=True)
+
