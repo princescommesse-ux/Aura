@@ -115,8 +115,8 @@ if st.button("🚀 Run High-Precision Analysis"):
         seed_val = hash(selected_asset + tf_choice + str(datetime.now().minute // 5))
         rnd = random.Random(seed_val)
         
-        # Direzioni aggiornate con frecce e senza le scritte put/call
-        direzioni = ["BUY 🟢 ⬆️", "SELL 🔴 ⬇️"]
+        # Direzioni pulite con le frecce dirette integrate
+        direzioni = ["BUY 🟢 📈", "SELL 🔴 📉"]
         st.session_state.cached_direction = rnd.choice(direzioni)
         st.session_state.cached_time = get_next_candle_time(tf_seconds)
         
