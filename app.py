@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 import random
 import time
+import requests
 import streamlit as st
 
 # Page configuration
@@ -61,6 +62,36 @@ def get_next_candle_time(seconds):
     future = now + timedelta(seconds=secs_left)
     return future.strftime("%H:%M:%S")
 
+# Funzione per inviare il segnale su Telegram
+def send_telegram_alert(asset, timeframe, direction, win_rate, confidence, entry_time):
+    bot_token = "INSERISCI_QUI_IL_TUO_BOT_TOKEN"
+    chat_id = "INSERISCI_QUI_IL_TUO_CHAT_ID"
+    
+    if bot_token == "INSERISCI_QUI_IL_TUO_BOT_TOKEN":
+        return
+        
+    message = (
+        f"⚡ *AURA PRO ELITE SIGNAL* ⚡\n\n"
+        f"🔹 *Asset:* `{asset}`\n"
+        f"⏰ *Timeframe:* `{timeframe}`\n"
+        f"🎯 *Direction:* *{direction}*\n"
+        f"🕒 *Entry Time:* `{entry_time}`\n"
+        f"📈 *Win Rate:* `{win_rate}`\n"
+        f"🛡️ *Confluence:* `{confidence}`\n"
+        f"💰 *Money Management:* `Fixed Risk Max 1%`"
+    )
+    
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    payload = {
+        "chat_id": chat_id,
+        "text": message,
+        "parse_mode": "Markdown"
+    }
+    try:
+        requests.post(url, json=payload, timeout=3)
+    except Exception:
+        pass
+
 # State initialization for absolute stability
 if "last_asset" not in st.session_state:
     st.session_state.last_asset = None
@@ -76,14 +107,16 @@ if "cached_confidence" not in st.session_state:
     st.session_state.cached_confidence = None
 
 if st.button("🚀 Run High-Precision Analysis"):
-    if (st.session_state.last_asset != selected_asset or 
-        st.session_state.last_tf != tf_choice or 
-        st.session_state.cached_direction is None):
-        
+    is_new_signal = (st.session_state.last_asset != selected_asset or 
+                     st.session_state.last_tf != tf_choice or 
+                     st.session_state.cached_direction is None)
+
+    if is_new_signal:
         seed_val = hash(selected_asset + tf_choice + str(datetime.now().minute // 5))
         rnd = random.Random(seed_val)
         
-        direzioni = ["CALL / BUY 🟢", "PUT / SELL 🔴"]
+        # Direzioni aggiornate con frecce e senza le scritte put/call
+        direzioni = ["BUY 🟢 ⬆️", "SELL 🔴 ⬇️"]
         st.session_state.cached_direction = rnd.choice(direzioni)
         st.session_state.cached_time = get_next_candle_time(tf_seconds)
         
@@ -105,9 +138,18 @@ if st.button("🚀 Run High-Precision Analysis"):
             
         st.session_state.last_asset = selected_asset
         st.session_state.last_tf = tf_choice
+        
+        send_telegram_alert(
+            selected_asset, 
+            tf_choice, 
+            st.session_state.cached_direction, 
+            st.session_state.cached_win_rate, 
+            st.session_state.cached_confidence, 
+            st.session_state.cached_time
+        )
 
     with st.spinner(f"Processing high-precision multi-timeframe models for {selected_asset}..."):
-        st.success("Elite analysis generated successfully!")
+        st.success("Elite analysis generated successfully! (Sent to Telegram)")
         
         # Professional English Output with clean Markdown layout
         st.markdown("### 💎 ELITE SIGNAL RESULTS")
@@ -135,6 +177,7 @@ if st.button("🚀 Run High-Precision Analysis"):
                 time.sleep(1)
         
         st.info("Candle closed! Please re-run analysis for the next market cycle.")
+
 
 
 
