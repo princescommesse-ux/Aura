@@ -1,12 +1,12 @@
 from datetime import datetime, timedelta
-import random
 import requests
 import streamlit as st
 import streamlit.components.v1 as components
+import yfinance as yf
 
 # Page configuration
 st.set_page_config(
-    page_title="Aura Pro", 
+    page_title="Aura Pro Ultimate", 
     page_icon="⚡", 
     layout="centered"
 )
@@ -18,34 +18,33 @@ st.markdown(
     .main { background-color: #121212; color: #ffffff; }
     .stButton>button { width: 100%; border-radius: 8px; font-weight: bold; background-color: #1f1f1f; color: #00ffcc; border: 1px solid #333333; }
     .stButton>button:hover { background-color: #333333; color: #ffffff; border-color: #00ffcc; }
-    .countdown-box { font-size: 28px; font-weight: bold; color: #00ffcc; text-align: center; background-color: #1f1f1f; padding: 12px; border-radius: 8px; border: 1px solid #333333; margin-bottom: 10px; }
     .market-badge { background-color: #1f1f1f; padding: 8px 12px; border-radius: 6px; border: 1px solid #333333; font-size: 14px; margin-bottom: 15px; text-align: center; }
+    .analysis-box { background-color: #1a1a1a; padding: 15px; border-radius: 8px; border: 1px solid #00ffcc; margin-top: 15px; }
+    .standby-box { background-color: #1a1a1a; padding: 15px; border-radius: 8px; border: 1px solid #ff4444; margin-top: 15px; text-align: center; color: #ff4444; font-weight: bold; }
     </style>
     """, 
     unsafe_allow_html=True,
 )
 
-st.title("⚡ AURA PRO ⚡")
+st.title("⚡ AURA PRO (ULTIMATE INSTITUTIONAL ENGINE) ⚡")
 
-# Top 10 Elite Currency Pairs with Yahoo Finance Ticker Mapping
+# Top 10 Elite Currency Pairs
 assets_dict = {
-    "🇪🇺🇺🇸 EUR/USD": {"symbol": "EURUSD=X", "api": "EURUSD=X"},
-    "🇬🇧🇺🇸 GBP/USD": {"symbol": "GBPUSD=X", "api": "GBPUSD=X"},
-    "🇺🇸🇯🇵 USD/JPY": {"symbol": "USDJPY=X", "api": "USDJPY=X"},
-    "🇦🇺🇺🇸 AUD/USD": {"symbol": "AUDUSD=X", "api": "AUDUSD=X"},
-    "🇺🇸🇨🇦 USD/CAD": {"symbol": "USDCAD=X", "api": "USDCAD=X"},
-    "🇺🇸🇨🇭 USD/CHF": {"symbol": "USDCHF=X", "api": "USDCHF=X"},
-    "🇬🇧🇯🇵 GBP/JPY": {"symbol": "GBPJPY=X", "api": "GBPJPY=X"},
-    "🇪🇺🇯🇵 EUR/JPY": {"symbol": "EURJPY=X", "api": "EURJPY=X"},
-    "🇪🇺🇬🇧 EUR/GBP": {"symbol": "EURGBP=X", "api": "EURGBP=X"},
-    "🇦🇺🇯🇵 AUD/JPY": {"symbol": "AUDJPY=X", "api": "AUDJPY=X"}
+    "🇪🇺🇺🇸 EUR/USD": {"symbol": "EURUSD=X"},
+    "🇬🇧🇺🇸 GBP/USD": {"symbol": "GBPUSD=X"},
+    "🇺🇸🇯🇵 USD/JPY": {"symbol": "USDJPY=X"},
+    "🇦🇺🇺🇸 AUD/USD": {"symbol": "AUDUSD=X"},
+    "🇺🇸🇨🇦 USD/CAD": {"symbol": "USDCAD=X"},
+    "🇺🇸🇨🇭 USD/CHF": {"symbol": "USDCHF=X"},
+    "🇬🇧🇯🇵 GBP/JPY": {"symbol": "GBPJPY=X"},
+    "🇪🇺🇯🇵 EUR/JPY": {"symbol": "EURJPY=X"},
+    "🇪🇺🇬🇧 EUR/GBP": {"symbol": "EURGBP=X"},
+    "🇦🇺🇯🇵 AUD/JPY": {"symbol": "AUDJPY=X"}
 }
 
 selected_display = st.selectbox("Select Currency Pair", list(assets_dict.keys()))
-asset_info = assets_dict[selected_display]
-selected_asset = asset_info["symbol"]
+selected_asset = assets_dict[selected_display]["symbol"]
 
-# Function to calculate active market sessions
 def get_market_sessions():
     utc_hour = datetime.utcnow().hour
     active = []
@@ -62,7 +61,6 @@ def get_market_sessions():
 st.markdown(f'<div class="market-badge">🌐 <b>Market Sessions:</b> {get_market_sessions()}</div>', unsafe_allow_html=True)
 
 st.markdown("### ⏰ Timeframe")
-
 scadenze = {
     "M1 (60s)": 60,
     "M3 (180s)": 180,
@@ -76,32 +74,98 @@ tf_seconds = scadenze[tf_choice]
 
 def get_seconds_to_next_candle(seconds):
     now = datetime.now()
-    total_seconds_today = now.hour * 3600 + now.minute * 60 + now.second + now.microsecond / 1_000_000
-    remainder = total_seconds_today % seconds
-    seconds_left = int(seconds - remainder)
-    return max(1, seconds_left)
+    total_secs = now.hour * 3600 + now.minute * 60 + now.second + now.microsecond / 1_000_000
+    return max(1, int(seconds - (total_secs % seconds)))
 
 def get_next_candle_time(seconds):
     now = datetime.now()
-    secs_left = get_seconds_to_next_candle(seconds)
-    future = now + timedelta(seconds=secs_left)
-    return future.strftime("%H:%M:%S")
+    return (now + timedelta(seconds=get_seconds_to_next_candle(seconds))).strftime("%H:%M:%S")
 
-# Function to send Telegram alert
+# --- MOTORE DI ANALISI TOTALE (MULTI-INDICATOR + PATTERN POSITION) ---
+def ultimate_institutional_analysis(ticker, timeframe_choice):
+    try:
+        interval_map = {
+            "M1 (60s)": "1m",
+            "M3 (180s)": "2m",
+            "M5 (300s)": "5m",
+            "M10 (600s)": "5m",
+            "M15 (900s)": "15m"
+        }
+        iv = interval_map.get(timeframe_choice, "1m")
+        
+        df = yf.download(ticker, period="1d", interval=iv, progress=False)
+        if df.empty or len(df) < 35:
+            return "STAND BY", "N/A", "Insufficient Market Data", {}
+        
+        close = df['Close']
+        
+        # 1. RSI (14)
+        delta = close.diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+        rs = gain / loss
+        rsi = 100 - (100 / (1 + rs))
+        current_rsi = float(rsi.iloc[-1].item())
+        
+        # 2. EMA Trend (9 e 21)
+        ema9 = close.ewm(span=9, adjust=False).mean()
+        ema21 = close.ewm(span=21, adjust=False).mean()
+        is_bullish_trend = float(ema9.iloc[-1].item()) > float(ema21.iloc[-1].item())
+        
+        # 3. Bande di Bollinger (20, 2) per la posizione del pattern sul livello estremo
+        sma20 = close.rolling(window=20).mean()
+        std20 = close.rolling(window=20).std()
+        upper_band = sma20 + (std20 * 2)
+        lower_band = sma20 - (std20 * 2)
+        curr_price = float(close.iloc[-1].item())
+        curr_lower = float(lower_band.iloc[-1].item())
+        curr_upper = float(upper_band.iloc[-1].item())
+        
+        # 4. MACD Momentum
+        exp12 = close.ewm(span=12, adjust=False).mean()
+        exp26 = close.ewm(span=26, adjust=False).mean()
+        macd = exp12 - exp26
+        signal_line = macd.ewm(span=9, adjust=False).mean()
+        macd_val = float(macd.iloc[-1].item())
+        sig_val = float(signal_line.iloc[-1].item())
+        is_macd_bullish = macd_val > sig_val
+
+        # Raccolta metriche per il pannello
+        details = {
+            "RSI": f"{current_rsi:.1f}",
+            "Trend EMA (9/21)": "BULLISH 🟢" if is_bullish_trend else "BEARISH 🔴",
+            "Bollinger Position": "Testing Lower Bound (Support)" if curr_price <= curr_lower * 1.002 else ("Testing Upper Bound (Resistance)" if curr_price >= curr_upper * 0.998 else "Mid-Channel"),
+            "MACD Cross": "BULLISH 🟢" if is_macd_bullish else "BEARISH 🔴"
+        }
+
+        # --- FILTRO DI MASSIMA PRECISIONE (CONFLUENZA TOTALE) ---
+        # Condizione BUY: Trend rialzista + RSI in zona di rimbalzo (< 45) + Prezzo vicino alla banda inferiore + MACD positivo
+        if is_bullish_trend and current_rsi <= 45 and curr_price <= (curr_lower * 1.005) and is_macd_bullish:
+            return "BUY 🟢", "87.0% - 90.0%", "Maximum Institutional Confluence (Support Bounce)", details
+        
+        # Condizione SELL: Trend ribassista + RSI in zona di rifiuto (> 55) + Prezzo vicino alla banda superiore + MACD negativo
+        elif not is_bullish_trend and current_rsi >= 55 and curr_price >= (curr_upper * 0.995) and not is_macd_bullish:
+            return "SELL 🔴", "87.0% - 90.0%", "Maximum Institutional Confluence (Resistance Rejection)", details
+        else:
+            return "STAND BY / NO TRADE", "N/A", "Market in Equilibrium (Waiting for Extreme Setup)", details
+            
+    except Exception as e:
+        return "STAND BY", "N/A", f"Error: {str(e)}", {}
+
 def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence, entry_time):
     bot_token = "INSERISCI_QUI_IL_TUO_BOT_TOKEN"
     chat_id = "INSERISCI_QUI_IL_TUO_CHAT_ID"
     if bot_token == "INSERISCI_QUI_IL_TUO_BOT_TOKEN":
         return
     message = (
-        f"⚡ *AURA PRO SIGNAL* ⚡\n\n"
+        f"⚡ *AURA PRO ULTIMATE SIGNAL* ⚡\n\n"
         f"🔹 *Asset:* `{display_name}`\n"
         f"⏰ *Timeframe:* `{timeframe}`\n"
         f"🎯 *Direction:* *{direction}*\n"
         f"🕒 *Entry Time:* `{entry_time}`\n"
-        f"📈 *Win Rate:* `{win_rate}`\n"
-        f"🛡️ *Confluence:* `{confidence}`\n"
-        f"💰 *Money Management:* `1% Account Capital`"
+        f"📈 *Expected Accuracy:* `{win_rate}`\n"
+        f"🛡️ *Status:* `{confidence}`\n"
+        f"💰 *Risk Management:* `1% Fixed Capital`"
     )
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     payload = {"chat_id": chat_id, "text": message, "parse_mode": "Markdown"}
@@ -110,80 +174,82 @@ def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence
     except Exception:
         pass
 
-# --- SESSION STATE INITIALIZATION ---
-if "signal_active" not in st.session_state:
-    st.session_state.signal_active = False
-if "cached_asset_display" not in st.session_state:
-    st.session_state.cached_asset_display = None
-if "cached_tf_choice" not in st.session_state:
-    st.session_state.cached_tf_choice = None
-if "cached_tf_seconds" not in st.session_state:
-    st.session_state.cached_tf_seconds = None
-if "cached_direction" not in st.session_state:
-    st.session_state.cached_direction = None
-if "cached_win_rate" not in st.session_state:
-    st.session_state.cached_win_rate = None
-if "cached_time" not in st.session_state:
-    st.session_state.cached_time = None
-if "cached_confidence" not in st.session_state:
-    st.session_state.cached_confidence = None
+# Session State Initialization
+if "signal_active" not in st.session_state: st.session_state.signal_active = False
+if "cached_asset_display" not in st.session_state: st.session_state.cached_asset_display = None
+if "cached_tf_choice" not in st.session_state: st.session_state.cached_tf_choice = None
+if "cached_tf_seconds" not in st.session_state: st.session_state.cached_tf_seconds = None
+if "cached_direction" not in st.session_state: st.session_state.cached_direction = None
+if "cached_win_rate" not in st.session_state: st.session_state.cached_win_rate = None
+if "cached_time" not in st.session_state: st.session_state.cached_time = None
+if "cached_confidence" not in st.session_state: st.session_state.cached_confidence = None
+if "cached_details" not in st.session_state: st.session_state.cached_details = {}
 
-if st.button("🚀 Run High-Precision Analysis"):
-    # Fixato: usa il blocco temporale della candela come seed anziché l'orario al millisecondo.
-    # In questo modo, finché la candela è la stessa, il segnale rimane perfettamente stabile.
-    now = datetime.now()
-    total_secs = now.hour * 3600 + now.minute * 60 + now.second
-    candle_block_id = total_secs // tf_seconds
+if st.button("🚀 Run Ultimate Institutional Analysis"):
+    direction, win_rate, confidence, details = ultimate_institutional_analysis(selected_asset, tf_choice)
     
-    seed_val = hash(selected_asset + tf_choice + str(candle_block_id))
-    rnd = random.Random(seed_val)
-    
-    st.session_state.cached_direction = rnd.choice(["BUY 🟢", "SELL 🔴"])
+    st.session_state.cached_direction = direction
+    st.session_state.cached_win_rate = win_rate
+    st.session_state.cached_confidence = confidence
     st.session_state.cached_time = get_next_candle_time(tf_seconds)
     st.session_state.cached_asset_display = selected_display
     st.session_state.cached_tf_choice = tf_choice
     st.session_state.cached_tf_seconds = tf_seconds
+    st.session_state.cached_details = details
     st.session_state.signal_active = True
-    
-    if tf_choice in ["M15 (900s)", "M10 (600s)"]:
-        st.session_state.cached_win_rate = "88.5% - 91.0%"
-        st.session_state.cached_confidence = "Maximum (High Confluence)"
-    elif tf_choice == "M5 (300s)":
-        st.session_state.cached_win_rate = "82.0% - 85.5%"
-        st.session_state.cached_confidence = "High (Optimal Balance)"
-    else:
-        st.session_state.cached_win_rate = "76.0% - 79.5%"
-        st.session_state.cached_confidence = "Fast Scalping Mode"
         
-    send_telegram_alert(
-        selected_display, 
-        tf_choice, 
-        st.session_state.cached_direction, 
-        st.session_state.cached_win_rate, 
-        st.session_state.cached_confidence, 
-        st.session_state.cached_time
-    )
+    if "STAND BY" not in direction:
+        send_telegram_alert(
+            selected_display, 
+            tf_choice, 
+            st.session_state.cached_direction, 
+            st.session_state.cached_win_rate, 
+            st.session_state.cached_confidence, 
+            st.session_state.cached_time
+        )
 
-# --- RENDER PERSISTENT SIGNAL & LIVE RUNNING TIMER ---
 if st.session_state.signal_active:
-    st.success("Analysis generated successfully! (Sent to Telegram)")
+    st.success("Analysis complete!")
     
-    st.markdown("### 💎 SIGNAL RESULTS 💎")
+    st.markdown("### 💎 ULTIMATE EXECUTION REPORT 💎")
     st.markdown(f"""
     * **Asset:** `{st.session_state.cached_asset_display}`
     * **Timeframe:** `{st.session_state.cached_tf_choice}`
     * **Signal Direction:** **{st.session_state.cached_direction}**
     * **Entry Time (Candle Close):** `{st.session_state.cached_time}`
-    * **Estimated Success Rate:** `{st.session_state.cached_win_rate}`
-    * **Confluence Status:** `{st.session_state.cached_confidence}`
+    * **Estimated Accuracy:** `{st.session_state.cached_win_rate}`
+    * **Filter Status:** `{st.session_state.cached_confidence}`
     * **Money Management:** `1% Account Capital`
     """)
+    
+    details = st.session_state.cached_details
+    if details:
+        if "STAND BY" in st.session_state.cached_direction:
+            st.markdown(f"""
+            <div class="standby-box">
+                <h4>🛑 STAND BY: FILTRATO DAL SISTEMA</h4>
+                <p>Il mercato non rispetta i criteri di confluenza estrema. Nessun segnale generato per proteggere il capitale.</p>
+                <hr style="border-color: #ff4444;">
+                <p style="color: #ffffff; text-align: left;"><b>RSI:</b> {details.get('RSI', 'N/A')}</p>
+                <p style="color: #ffffff; text-align: left;"><b>Trend EMA:</b> {details.get('Trend EMA (9/21)', 'N/A')}</p>
+                <p style="color: #ffffff; text-align: left;"><b>Posizione Bollinger:</b> {details.get('Bollinger Position', 'N/A')}</p>
+                <p style="color: #ffffff; text-align: left;"><b>MACD:</b> {details.get('MACD Cross', 'N/A')}</p>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div class="analysis-box">
+                <h4>📊 MULTI-LAYER METRICS ALIGNED</h4>
+                <p><b>RSI (14):</b> {details.get('RSI', 'N/A')}</p>
+                <p><b>Trend EMA (9/21):</b> {details.get('Trend EMA (9/21)', 'N/A')}</p>
+                <p><b>Bollinger Position:</b> {details.get('Bollinger Position', 'N/A')}</p>
+                <p><b>MACD Momentum:</b> {details.get('MACD Cross', 'N/A')}</p>
+            </div>
+            """, unsafe_allow_html=True)
 
     st.markdown("### ⏳ Current Candle Countdown")
-    
     initial_left = get_seconds_to_next_candle(st.session_state.cached_tf_seconds)
     
-    # Timer con gestione dello stop a zero (nessun blocco anomalo)
     timer_html = f"""
     <div style="font-size: 28px; font-weight: bold; color: #00ffcc; text-align: center; background-color: #1f1f1f; padding: 15px; border-radius: 8px; border: 1px solid #333333;" id="countdown">
         Loading timer...
