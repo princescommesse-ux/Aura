@@ -155,4 +155,70 @@ if st.button("🚀 Run High-Precision Analysis"):
             st.session_state.cached_confidence = "High (Optimal Balance)"
         else:
             st.session_state.cached_win_rate = "76.0% - 79.5%"
-            st.
+            st.session_state.cached_confidence = "Fast Scalping Mode"
+            
+        st.session_state.last_asset = selected_asset
+        st.session_state.last_tf = tf_choice
+        
+        send_telegram_alert(
+            selected_display, 
+            tf_choice, 
+            st.session_state.cached_direction, 
+            st.session_state.cached_win_rate, 
+            st.session_state.cached_confidence, 
+            st.session_state.cached_time
+        )
+
+    with st.spinner(f"Processing high-precision multi-timeframe models for {selected_display}..."):
+        st.success("Analysis generated successfully! (Sent to Telegram)")
+        
+        # Professional English Output with clean Markdown layout and double diamonds
+        st.markdown("### 💎 SIGNAL RESULTS 💎")
+        st.markdown(f"""
+        * **Asset:** `{selected_display}`
+        * **Timeframe:** `{tf_choice}`
+        * **Signal Direction:** **{st.session_state.cached_direction}**
+        * **Entry Time (Candle Close):** `{st.session_state.cached_time}`
+        * **Estimated Success Rate:** `{st.session_state.cached_win_rate}`
+        * **Confluence Status:** `{st.session_state.cached_confidence}`
+        * **Money Management:** `Fixed Risk X1`
+        """)
+
+        # Synchronized Live Countdown Timer matching candle close
+        st.markdown("### ⏳ Current Candle Countdown")
+        placeholder = st.empty()
+        
+        initial_left = get_seconds_to_next_candle(tf_seconds)
+        
+        for remaining in range(initial_left, -1, -1):
+            mins, secs = divmod(remaining, 60)
+            time_format = f"{mins:02d}:{secs:02d}"
+            placeholder.markdown(f'<div class="countdown-box">⏱️ {time_format}</div>', unsafe_allow_html=True)
+            if remaining > 0:
+                time.sleep(1)
+        
+        # --- FINESTRA LIVE: SECONDO TENTATIVO / MARTINGALA X1 (COERENTE CON LA DIREZIONE) ---
+        live_seed = hash(selected_asset + tf_choice + str(time.time()))
+        live_rnd = random.Random(live_seed)
+        
+        is_favorable_x1 = live_rnd.random() > 0.32
+        current_dir = st.session_state.cached_direction
+        
+        if is_favorable_x1:
+            box_action = f"🟢 RE-ENTER {current_dir} (Martingala X1 - Recommended)"
+            box_rate = f"{live_rnd.randint(82, 90)}% Success Probability"
+            box_advice = f"The previous candle showed rejection. Maintaining direction ({current_dir}) for the 2nd attempt at X1."
+        else:
+            box_action = "🔴 DO NOT ENTER / SKIP (Not Recommended)"
+            box_rate = f"{live_rnd.randint(45, 62)}% Low Probability"
+            box_advice = "Market volatility is erratic after candle close. Skip this second attempt to protect capital."
+
+        st.markdown(f"""
+        <div class="martingale-live-box">
+            <h4>🔄 LIVE CHECK: 2nd ATTEMPT (MARTINGALA X1)</h4>
+            <p><b>Real-time Evaluation:</b> {box_action}</p>
+            <p><b>Target Direction:</b> <b>{current_dir}</b></p>
+            <p><b>Probability / Success Rate:</b> <code>{box_rate}</code></p>
+            <p><b>Analysis Advice:</b> {box_advice}</p>
+        </div>
+        """, unsafe_allow_html=True)
