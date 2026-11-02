@@ -80,7 +80,6 @@ if st.button("🚀 Run High-Precision Analysis"):
         st.session_state.last_tf != tf_choice or 
         st.session_state.cached_direction is None):
         
-        # Algoritmo di confluenza avanzata basato su asset e orario (elimina la casualità pura)
         seed_val = hash(selected_asset + tf_choice + str(datetime.now().minute // 5))
         rnd = random.Random(seed_val)
         
@@ -88,7 +87,6 @@ if st.button("🚀 Run High-Precision Analysis"):
         st.session_state.cached_direction = rnd.choice(direzioni)
         st.session_state.cached_time = get_next_candle_time(tf_seconds)
         
-        # Assegnazione di percentuali di successo d'élite basate sulla robustezza del timeframe
         if tf_choice == "M15 (900s)":
             st.session_state.cached_win_rate = "88.5% - 91.0%"
             st.session_state.cached_confidence = "Maximum (Elite Confluence)"
@@ -97,47 +95,7 @@ if st.button("🚀 Run High-Precision Analysis"):
             st.session_state.cached_confidence = "Very High (Strong Trend)"
         elif tf_choice == "M5 (300s)":
             st.session_state.cached_win_rate = "82.0% - 85.5%"
-            st.session_state.cached_confidence = "High (Optimal Balance)"
-        elif tf_choice == "M3 (180s)":
-            st.session_state.cached_win_rate = "79.0% - 82.0%"
-            st.session_state.cached_confidence = "Moderate-High (Dynamic)"
-        else:
-            st.session_state.cached_win_rate = "76.0% - 79.5%"
-            st.session_state.cached_confidence = "Fast Scalping Mode"
-            
-        st.session_state.last_asset = selected_asset
-        st.session_state.last_tf = tf_choice
+            st.session_state.
 
-    with st.spinner(f"Processing high-precision multi-timeframe models for {selected_asset}..."):
-        st.success("Elite analysis generated successfully!")
-        
-        # Professional English Output
-        st.markdown("### 💎 ELITE SIGNAL RESULTS")
-        st.markdown(f"""
-        <div class="metrics-box">
-        * **Asset:** `{selected_asset}`
-        * **Timeframe:** `{tf_choice}`
-        * **Signal Direction:** **{st.session_state.cached_direction}**
-        * **Entry Time (Candle Close):** `{st.session_state.cached_time}`
-        * **Estimated Success Rate:** `{st.session_state.cached_win_rate}`
-        * **Confluence Status:** `{st.session_state.cached_confidence}`
-        * **Money Management:** `Fixed Risk Max 1%`
-        </div>
-        """, unsafe_allow_html=True)
-
-        # Synchronized Live Countdown Timer
-        st.markdown("### ⏳ Current Candle Countdown")
-        placeholder = st.empty()
-        
-        initial_left = get_seconds_to_next_candle(tf_seconds)
-        
-        for remaining in range(initial_left, -1, -1):
-            mins, secs = divmod(remaining, 60)
-            time_format = f"{mins:02d}:{secs:02d}"
-            placeholder.markdown(f'<div class="countdown-box">⏱️ {time_format}</div>', unsafe_allow_html=True)
-            if remaining > 0:
-                time.sleep(1)
-        
-        st.info("Candle closed! Please re-run analysis for the next market cycle.")
 
 
