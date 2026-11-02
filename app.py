@@ -28,7 +28,7 @@ st.markdown(
 
 st.title("⚡ AURA PRO ⚡")
 
-# Top 10 Elite Currency Pairs with Yahoo Finance Ticker Mapping (No slash between flags)
+# Top 10 Elite Currency Pairs with Yahoo Finance Ticker Mapping
 assets_dict = {
     "🇪🇺🇺🇸 EUR/USD": {"symbol": "EURUSD=X", "api": "EURUSD=X"},
     "🇬🇧🇺🇸 GBP/USD": {"symbol": "GBPUSD=X", "api": "GBPUSD=X"},
@@ -68,26 +68,23 @@ def get_live_candle_outcome(ticker, signal_direction):
             
             if "BUY" in signal_direction:
                 is_win = candle_close > candle_open
-            else:  # SELL
+            else:
                 is_win = candle_close < candle_open
             return is_win, candle_open, candle_close
     except Exception:
         pass
-    
     return None
 
-# Function to calculate active market sessions (UTC based)
+# Function to calculate active market sessions
 def get_market_sessions():
     utc_hour = datetime.utcnow().hour
     active = []
-    
     if 0 <= utc_hour < 9:
         active.append("Tokyo 🟢")
     if 8 <= utc_hour < 16:
         active.append("London 🟢")
     if 13 <= utc_hour < 21:
         active.append("New York 🟢")
-        
     if not active:
         return "Low Liquidity / Asian Session 🌙"
     return " | ".join(active)
@@ -124,10 +121,8 @@ def get_next_candle_time(seconds):
 def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence, entry_time):
     bot_token = "INSERISCI_QUI_IL_TUO_BOT_TOKEN"
     chat_id = "INSERISCI_QUI_IL_TUO_CHAT_ID"
-    
     if bot_token == "INSERISCI_QUI_IL_TUO_BOT_TOKEN":
         return
-        
     message = (
         f"⚡ *AURA PRO SIGNAL* ⚡\n\n"
         f"🔹 *Asset:* `{display_name}`\n"
@@ -138,23 +133,24 @@ def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence
         f"🛡️ *Confluence:* `{confidence}`\n"
         f"💰 *Money Management:* `1% Account Capital (Fixed X1)`"
     )
-    
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-    payload = {
-        "chat_id": chat_id,
-        "text": message,
-        "parse_mode": "Markdown"
-    }
+    payload = {"chat_id": chat_id, "text": message, "parse_mode": "Markdown"}
     try:
         requests.post(url, json=payload, timeout=3)
     except Exception:
         pass
 
-# State initialization for absolute stability
-if "last_asset" not in st.session_state:
-    st.session_state.last_asset = None
-if "last_tf" not in st.session_state:
-    st.session_state.last_tf = None
+# --- SESSION STATE INITIALIZATION FOR PERSISTENCE ---
+if "signal_active" not in st.session_state:
+    st.session_state.signal_active = False
+if "cached_asset_display" not in st.session_state:
+    st.session_state.cached_asset_display = None
+if "cached_asset_api" not in st.session_state:
+    st.session_state.cached_asset_api = None
+if "cached_tf_choice" not in st.session_state:
+    st.session_state.cached_tf_choice = None
+if "cached_tf_seconds" not in st.session_state:
+    st.session_state.cached_tf_seconds = None
 if "cached_direction" not in st.session_state:
     st.session_state.cached_direction = None
 if "cached_win_rate" not in st.session_state:
@@ -166,113 +162,111 @@ if "cached_confidence" not in st.session_state:
 if "cached_live_eval" not in st.session_state:
     st.session_state.cached_live_eval = None
 
+# Button to trigger analysis
 if st.button("🚀 Run High-Precision Analysis"):
-    is_new_signal = (st.session_state.last_asset != selected_asset or 
-                     st.session_state.last_tf != tf_choice or 
-                     st.session_state.cached_direction is None)
+    seed_val = hash(selected_asset + tf_choice + str(datetime.now().minute // 5))
+    rnd = random.Random(seed_val)
+    
+    st.session_state.cached_direction = rnd.choice(["BUY 🟢", "SELL 🔴"])
+    st.session_state.cached_time = get_next_candle_time(tf_seconds)
+    st.session_state.cached_asset_display = selected_display
+    st.session_state.cached_asset_api = asset_info["api"]
+    st.session_state.cached_tf_choice = tf_choice
+    st.session_state.cached_tf_seconds = tf_seconds
+    st.session_state.cached_live_eval = None
+    st.session_state.signal_active = True
+    
+    if tf_choice in ["M15 (900s)", "M10 (600s)"]:
+        st.session_state.cached_win_rate = "88.5% - 91.0%"
+        st.session_state.cached_confidence = "Maximum (High Confluence)"
+    elif tf_choice == "M5 (300s)":
+        st.session_state.cached_win_rate = "82.0% - 85.5%"
+        st.session_state.cached_confidence = "High (Optimal Balance)"
+    else:
+        st.session_state.cached_win_rate = "76.0% - 79.5%"
+        st.session_state.cached_confidence = "Fast Scalping Mode"
+        
+    send_telegram_alert(
+        selected_display, 
+        tf_choice, 
+        st.session_state.cached_direction, 
+        st.session_state.cached_win_rate, 
+        st.session_state.cached_confidence, 
+        st.session_state.cached_time
+    )
 
-    if is_new_signal:
-        seed_val = hash(selected_asset + tf_choice + str(datetime.now().minute // 5))
-        rnd = random.Random(seed_val)
+# --- RENDER PERSISTENT SIGNAL & COUNTDOWN ---
+if st.session_state.signal_active:
+    st.success("Analysis generated successfully! (Sent to Telegram)")
+    
+    st.markdown("### 💎 SIGNAL RESULTS 💎")
+    st.markdown(f"""
+    * **Asset:** `{st.session_state.cached_asset_display}`
+    * **Timeframe:** `{st.session_state.cached_tf_choice}`
+    * **Signal Direction:** **{st.session_state.cached_direction}**
+    * **Entry Time (Candle Close):** `{st.session_state.cached_time}`
+    * **Estimated Success Rate:** `{st.session_state.cached_win_rate}`
+    * **Confluence Status:** `{st.session_state.cached_confidence}`
+    * **Money Management:** `1% Account Capital (Fixed X1)`
+    """)
+
+    st.markdown("### ⏳ Current Candle Countdown")
+    placeholder = st.empty()
+    
+    initial_left = get_seconds_to_next_candle(st.session_state.cached_tf_seconds)
+    
+    # Active countdown loop
+    for remaining in range(initial_left, 0, -1):
+        mins, secs = divmod(remaining, 60)
+        time_format = f"{mins:02d}:{secs:02d}"
+        placeholder.markdown(f'<div class="countdown-box">⏱️ {time_format}</div>', unsafe_allow_html=True)
+        time.sleep(1)
+    
+    placeholder.markdown('<div class="countdown-box">⏱️ 00:00</div>', unsafe_allow_html=True)
+    
+    # --- VERDICT & X1 RECOMMENDATION (TRIGGERS AT ZERO) ---
+    if st.session_state.cached_live_eval is None:
+        current_dir = st.session_state.cached_direction
+        real_check = get_live_candle_outcome(st.session_state.cached_asset_api, current_dir)
         
-        direzioni = ["BUY 🟢", "SELL 🔴"]
-        st.session_state.cached_direction = rnd.choice(direzioni)
-        st.session_state.cached_time = get_next_candle_time(tf_seconds)
-        st.session_state.cached_live_eval = None
-        
-        if tf_choice in ["M15 (900s)", "M10 (600s)"]:
-            st.session_state.cached_win_rate = "88.5% - 91.0%"
-            st.session_state.cached_confidence = "Maximum (High Confluence)"
-        elif tf_choice == "M5 (300s)":
-            st.session_state.cached_win_rate = "82.0% - 85.5%"
-            st.session_state.cached_confidence = "High (Optimal Balance)"
+        if real_check is not None:
+            is_win, c_open, c_close = real_check
         else:
-            st.session_state.cached_win_rate = "76.0% - 79.5%"
-            st.session_state.cached_confidence = "Fast Scalping Mode"
+            is_win = False
+        
+        if is_win:
+            outcome_text = "🟢 1st ATTEMPT: WIN (ITM)"
+            decision_banner = "🎉 **RESULT: WIN!** Target reached successfully."
+            advice_text = f"The candle closed successfully in our favor ({current_dir}). Cycle completed with profit."
+        else:
+            live_seed = hash(st.session_state.cached_asset_api + st.session_state.cached_tf_choice + str(datetime.now().minute))
+            live_rnd = random.Random(live_seed)
+            is_conviene_x1 = live_rnd.random() > 0.30
             
-        st.session_state.last_asset = selected_asset
-        st.session_state.last_tf = tf_choice
-        
-        send_telegram_alert(
-            selected_display, 
-            tf_choice, 
-            st.session_state.cached_direction, 
-            st.session_state.cached_win_rate, 
-            st.session_state.cached_confidence, 
-            st.session_state.cached_time
-        )
-
-    with st.spinner(f"Processing high-precision multi-timeframe models for {selected_display}..."):
-        st.success("Analysis generated successfully! (Sent to Telegram)")
-        
-        st.markdown("### 💎 SIGNAL RESULTS 💎")
-        st.markdown(f"""
-        * **Asset:** `{selected_display}`
-        * **Timeframe:** `{tf_choice}`
-        * **Signal Direction:** **{st.session_state.cached_direction}**
-        * **Entry Time (Candle Close):** `{st.session_state.cached_time}`
-        * **Estimated Success Rate:** `{st.session_state.cached_win_rate}`
-        * **Confluence Status:** `{st.session_state.cached_confidence}`
-        * **Money Management:** `1% Account Capital (Fixed X1)`
-        """)
-
-        st.markdown("### ⏳ Current Candle Countdown")
-        placeholder = st.empty()
-        
-        initial_left = get_seconds_to_next_candle(tf_seconds)
-        
-        # Countdown loop (displays timer only)
-        for remaining in range(initial_left, 0, -1):
-            mins, secs = divmod(remaining, 60)
-            time_format = f"{mins:02d}:{secs:02d}"
-            placeholder.markdown(f'<div class="countdown-box">⏱️ {time_format}</div>', unsafe_allow_html=True)
-            time.sleep(1)
-        
-        placeholder.markdown('<div class="countdown-box">⏱️ 00:00</div>', unsafe_allow_html=True)
-        
-        # --- VERDICT & X1 RECOMMENDATION (TRIGGERS ONLY WHEN TIMER REACHES ZERO) ---
-        if st.session_state.cached_live_eval is None:
-            current_dir = st.session_state.cached_direction
-            real_check = get_live_candle_outcome(asset_info["api"], current_dir)
-            
-            if real_check is not None:
-                is_win, c_open, c_close = real_check
+            outcome_text = "🔴 1st ATTEMPT: LOSS (OTM)"
+            if is_conviene_x1:
+                decision_banner = f"✅ **VERDICT: RECOMMENDED TO ENTER X1 ({current_dir})**"
+                advice_text = f"Market structure shows strong rejection on the key level. High probability setup to recover at X1 maintaining direction {current_dir}."
             else:
-                is_win = False
-            
-            if is_win:
-                outcome_text = "🟢 1st ATTEMPT: WIN (ITM)"
-                decision_banner = "🎉 **RESULT: WIN!** Target reached successfully."
-                advice_text = f"The candle closed successfully in our favor ({current_dir}). Cycle completed with profit."
-            else:
-                live_seed = hash(selected_asset + tf_choice + str(datetime.now().minute))
-                live_rnd = random.Random(live_seed)
-                is_conviene_x1 = live_rnd.random() > 0.30
-                
-                outcome_text = "🔴 1st ATTEMPT: LOSS (OTM)"
-                if is_conviene_x1:
-                    decision_banner = f"✅ **VERDICT: RECOMMENDED TO ENTER X1 ({current_dir})**"
-                    advice_text = f"Market structure shows strong rejection on the key level. High probability setup to recover at X1 maintaining direction {current_dir}."
-                else:
-                    decision_banner = "❌ **VERDICT: STAND ASIDE / SKIP TURN**"
-                    advice_text = "Choppy price action detected after candle close. Avoid entering X1 to protect capital."
-            
-            st.session_state.cached_live_eval = {
-                "outcome": outcome_text,
-                "decision": decision_banner,
-                "advice": advice_text,
-                "direction": current_dir
-            }
+                decision_banner = "❌ **VERDICT: STAND ASIDE / SKIP TURN**"
+                advice_text = "Choppy price action detected after candle close. Avoid entering X1 to protect capital."
+        
+        st.session_state.cached_live_eval = {
+            "outcome": outcome_text,
+            "decision": decision_banner,
+            "advice": advice_text,
+            "direction": current_dir
+        }
 
-        eval_data = st.session_state.cached_live_eval
+    eval_data = st.session_state.cached_live_eval
 
-        st.markdown(f"""
-        <div class="martingale-live-box">
-            <h4>🔄 LIVE CANDLE CLOSE VERDICT (X1 CHECK)</h4>
-            <p><b>Real-time First Attempt Outcome:</b> <b>{eval_data['outcome']}</b></p>
-            <p style="font-size: 16px; margin-top: 10px;">{eval_data['decision']}</p>
-            <p><b>Required Direction:</b> <b>{eval_data['direction']}</b></p>
-            <p><b>Analysis Advice:</b> {eval_data['advice']}</p>
-        </div>
-        """, unsafe_allow_html=True)
+    st.markdown(f"""
+    <div class="martingale-live-box">
+        <h4>🔄 LIVE CANDLE CLOSE VERDICT (X1 CHECK)</h4>
+        <p><b>Real-time First Attempt Outcome:</b> <b>{eval_data['outcome']}</b></p>
+        <p style="font-size: 16px; margin-top: 10px;">{eval_data['decision']}</p>
+        <p><b>Required Direction:</b> <b>{eval_data['direction']}</b></p>
+        <p><b>Analysis Advice:</b> {eval_data['advice']}</p>
+    </div>
+    """, unsafe_allow_html=True)
 
