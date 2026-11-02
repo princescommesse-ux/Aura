@@ -28,18 +28,18 @@ st.markdown(
 
 st.title("⚡ AURA PRO ⚡")
 
-# Top 10 Elite Currency Pairs with Flag Emojis (No spaces around slash)
+# Top 10 Elite Currency Pairs with Flag Emojis (Slash removed between flags)
 assets_dict = {
-    "🇪🇺/🇺🇸 EUR/USD": "EUR/USD",
-    "🇬🇧/🇺🇸 GBP/USD": "GBP/USD",
-    "🇺🇸/🇯🇵 USD/JPY": "USD/JPY",
-    "🇦🇺/🇺🇸 AUD/USD": "AUD/USD",
-    "🇺🇸/🇨🇦 USD/CAD": "USD/CAD",
-    "🇺🇸/🇨🇭 USD/CHF": "USD/CHF",
-    "🇬🇧/🇯🇵 GBP/JPY": "GBP/JPY",
-    "🇪🇺/🇯🇵 EUR/JPY": "EUR/JPY",
-    "🇪🇺/🇬🇧 EUR/GBP": "EUR/GBP",
-    "🇦🇺/🇯🇵 AUD/JPY": "AUD/JPY"
+    "🇪🇺🇺🇸 EUR/USD": "EUR/USD",
+    "🇬🇧🇺🇸 GBP/USD": "GBP/USD",
+    "🇺🇸🇯🇵 USD/JPY": "USD/JPY",
+    "🇦🇺🇺🇸 AUD/USD": "AUD/USD",
+    "🇺🇸🇨🇦 USD/CAD": "USD/CAD",
+    "🇺🇸🇨🇭 USD/CHF": "USD/CHF",
+    "🇬🇧🇯🇵 GBP/JPY": "GBP/JPY",
+    "🇪🇺🇯🇵 EUR/JPY": "EUR/JPY",
+    "🇪🇺🇬🇧 EUR/GBP": "EUR/GBP",
+    "🇦🇺🇯🇵 AUD/JPY": "AUD/JPY"
 }
 
 selected_display = st.selectbox("Select Currency Pair", list(assets_dict.keys()))
@@ -200,35 +200,33 @@ if st.button("🚀 Run High-Precision Analysis"):
             if remaining > 0:
                 time.sleep(1)
         
-        # --- VALUTAZIONE LIVE DELL'ESITO E MARTINGALA X1 ---
+        # --- VALUTAZIONE LIVE DECISIVA (CONVIENE / NON CONVIENE A X1) ---
         if st.session_state.cached_live_eval is None:
             live_seed = hash(selected_asset + tf_choice + str(datetime.now().minute))
             live_rnd = random.Random(live_seed)
             
-            # Determina se la prima operazione ha chiuso in WIN o LOSS
             is_win = live_rnd.random() > 0.40
             current_dir = st.session_state.cached_direction
             
             if is_win:
-                outcome_text = "🟢 FIRST ATTEMPT: WIN (ITM)"
-                advice_text = "The candle closed successfully in our favor. Session target reached for this cycle."
-                action_box = "🎉 **Result:** Win! No need for Martingala. Enjoy profits."
+                outcome_text = "🟢 PRIMO TENTATIVO: WIN (ITM)"
+                decision_banner = "🎉 **ESITO: VINTO!** Nessun bisogno di recupero."
+                advice_text = "La candela ha chiuso in profitto. Il ciclo si conclude qui con successo."
             else:
-                # Se è LOSS, valuta se ci sono i presupposti per il secondo tentativo X1
-                is_favorable_x1 = live_rnd.random() > 0.30
-                outcome_text = "🔴 FIRST ATTEMPT: LOSS (OTM)"
-                if is_favorable_x1:
-                    action_box = f"🟢 RE-ENTER {current_dir} (Martingala X1 - Recommended)"
-                    advice_text = f"Rejection detected at support/resistance. Safe to repeat {current_dir} at X1."
+                is_conviene_x1 = live_rnd.random() > 0.30
+                outcome_text = "🔴 PRIMO TENTATIVO: LOSS (OTM)"
+                
+                if is_conviene_x1:
+                    decision_banner = f"✅ **VERDETTO: CONVIENE ENTRARE A X1 ({current_dir})**"
+                    advice_text = f"I presupposti tecnici confermano la tenuta del livello. Ottima probabilità di recupero mantenendo la direzione {current_dir} a rischio fisso X1."
                 else:
-                    action_box = "🔴 SKIP / DO NOT ENTER (Low Probability)"
-                    advice_text = "Market turned choppy. Skip this X1 attempt to protect capital."
+                    decision_banner = "❌ **VERDETTO: NON CONVIENE / SALTA IL TURNO**"
+                    advice_text = "I presupposti di mercato post-candela sono deboli o confusi. Evita di entrare a X1 per proteggere il capitale."
             
             st.session_state.cached_live_eval = {
                 "outcome": outcome_text,
-                "action": action_box,
+                "decision": decision_banner,
                 "advice": advice_text,
-                "is_win": is_win,
                 "direction": current_dir
             }
 
@@ -236,10 +234,10 @@ if st.button("🚀 Run High-Precision Analysis"):
 
         st.markdown(f"""
         <div class="martingale-live-box">
-            <h4>🔄 LIVE CANDLE CLOSE RESULT & CHECK</h4>
-            <p><b>First Trade Outcome:</b> <b>{eval_data['outcome']}</b></p>
-            <p><b>Target Direction:</b> <b>{eval_data['direction']}</b></p>
-            <p><b>Next Step Action:</b> {eval_data['action']}</p>
-            <p><b>Analysis Advice:</b> {eval_data['advice']}</p>
+            <h4>🔄 LIVE CANDLE CLOSE VERDICT (X1 CHECK)</h4>
+            <p><b>Esito Prima Operazione:</b> <b>{eval_data['outcome']}</b></p>
+            <p style="font-size: 16px; margin-top: 10px;">{eval_data['decision']}</p>
+            <p><b>Direzione Richiesta:</b> <b>{eval_data['direction']}</b></p>
+            <p><b>Analisi e Consigli:</b> {eval_data['advice']}</p>
         </div>
         """, unsafe_allow_html=True)
