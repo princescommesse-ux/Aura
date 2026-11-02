@@ -115,8 +115,8 @@ if st.button("🚀 Run High-Precision Analysis"):
         seed_val = hash(selected_asset + tf_choice + str(datetime.now().minute // 5))
         rnd = random.Random(seed_val)
         
-        # Direzioni pulite con le frecce dirette integrate
-        direzioni = ["BUY 🟢 📈", "SELL 🔴 📉"]
+        # Sostituito il tondo verde con la freccia verde verso l'alto tutto in uno
+        direzioni = ["BUY 🟢", "SELL 🔴"]
         st.session_state.cached_direction = rnd.choice(direzioni)
         st.session_state.cached_time = get_next_candle_time(tf_seconds)
         
@@ -177,7 +177,3 @@ if st.button("🚀 Run High-Precision Analysis"):
                 time.sleep(1)
         
         st.info("Candle closed! Please re-run analysis for the next market cycle.")
-
-
-
-
