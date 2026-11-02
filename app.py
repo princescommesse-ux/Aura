@@ -25,7 +25,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("⚡ AURA PRO FOREX PANEL ⚡")
+st.title("⚡ AURA PRO ⚡")
 
 # Top 10 Elite Currency Pairs for Pocket Option
 assets = [
