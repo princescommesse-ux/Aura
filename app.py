@@ -161,8 +161,6 @@ if "cached_confidence" not in st.session_state:
     st.session_state.cached_confidence = None
 if "cached_live_eval" not in st.session_state:
     st.session_state.cached_live_eval = None
-if "signal_start_time" not in st.session_state:
-    st.session_state.signal_start_time = None
 
 if st.button("🚀 Run High-Precision Analysis"):
     seed_val = hash(selected_asset + tf_choice + str(datetime.now()))
@@ -176,7 +174,6 @@ if st.button("🚀 Run High-Precision Analysis"):
     st.session_state.cached_tf_seconds = tf_seconds
     st.session_state.cached_live_eval = None
     st.session_state.signal_active = True
-    st.session_state.signal_start_time = time.time()  # Registra il momento esatto dell'analisi
     
     if tf_choice in ["M15 (900s)", "M10 (600s)"]:
         st.session_state.cached_win_rate = "88.5% - 91.0%"
@@ -197,7 +194,7 @@ if st.button("🚀 Run High-Precision Analysis"):
         st.session_state.cached_time
     )
 
-# --- RENDER PERSISTENT SIGNAL & COUNTDOWN ---
+# --- RENDER PERSISTENT SIGNAL & REAL-TIME COUNTDOWN ---
 if st.session_state.signal_active:
     st.success("Analysis generated successfully! (Sent to Telegram)")
     
@@ -215,25 +212,19 @@ if st.session_state.signal_active:
     st.markdown("### ⏳ Current Candle Countdown")
     placeholder = st.empty()
     
-    # Calcola i secondi effettivi mancanti basati sulla durata del timeframe scelto
-    elapsed_time = time.time() - st.session_state.signal_start_time
-    initial_left = int(st.session_state.cached_tf_seconds - (elapsed_time % st.session_state.cached_tf_seconds))
-    if initial_left <= 0:
-        initial_left = st.session_state.cached_tf_seconds
+    # Sincronizzato direttamente con l'orario reale di chiusura della candela del broker
+    initial_left = get_seconds_to_next_candle(st.session_state.cached_tf_seconds)
 
-    # Mostra il conto alla rovescia reale
-    show_verdict = False
+    # Countdown loop in tempo reale
     for remaining in range(initial_left, 0, -1):
         mins, secs = divmod(remaining, 60)
         time_format = f"{mins:02d}:{secs:02d}"
         placeholder.markdown(f'<div class="countdown-box">⏱️ {time_format}</div>', unsafe_allow_html=True)
         time.sleep(1)
-        if remaining == 1:
-            show_verdict = True
 
     placeholder.markdown('<div class="countdown-box">⏱️ 00:00</div>', unsafe_allow_html=True)
     
-    # --- VERDICT & X1 RECOMMENDATION (SI ATTIVA SOLO ALLO SCADERE REALE) ---
+    # --- VERDICT & X1 RECOMMENDATION (SI ATTIVA ESATTAMENTE ALLO SCADERE) ---
     if st.session_state.cached_live_eval is None:
         current_dir = st.session_state.cached_direction
         real_check = get_live_candle_outcome(st.session_state.cached_asset_api, current_dir)
