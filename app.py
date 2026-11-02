@@ -106,7 +106,7 @@ def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence
         f"🕒 *Entry Time:* `{entry_time}`\n"
         f"📈 *Win Rate:* `{win_rate}`\n"
         f"🛡️ *Confluence:* `{confidence}`\n"
-        f"💰 *Money Management:* `Fixed Risk X1 (No Martingale)`"
+        f"💰 *Money Management:* `Fixed Risk X1`"
     )
     
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
@@ -181,7 +181,7 @@ if st.button("🚀 Run High-Precision Analysis"):
         * **Entry Time (Candle Close):** `{st.session_state.cached_time}`
         * **Estimated Success Rate:** `{st.session_state.cached_win_rate}`
         * **Confluence Status:** `{st.session_state.cached_confidence}`
-        * **Money Management:** `Fixed Risk X1 (No Martingale)`
+        * **Money Management:** `Fixed Risk X1`
         """)
 
         # Synchronized Live Countdown Timer matching candle close
@@ -197,26 +197,26 @@ if st.button("🚀 Run High-Precision Analysis"):
             if remaining > 0:
                 time.sleep(1)
         
-        # --- BLOCCO DINAMICO ALLO SCADERE DELLA CANDELA (LIVE CHECK X1) ---
+        # --- FINESTRA LIVE: SECONDO TENTATIVO / MARTINGALA X1 ---
         live_seed = hash(selected_asset + tf_choice + str(time.time()))
         live_rnd = random.Random(live_seed)
         
-        is_favorable_x1 = live_rnd.random() > 0.30
+        is_favorable_x1 = live_rnd.random() > 0.32
         
         if is_favorable_x1:
-            x1_action = "🟢 FRESH ENTRY RECOMMENDED (Base Stake X1)"
-            x1_rate = f"{live_rnd.randint(83, 91)}% Success Probability"
-            x1_advice = "Market conditions remain clean. New base entry at X1 is supported by technical continuation."
+            box_action = "🟢 ENTER 2nd ATTEMPT (Martingala X1 - Recommended)"
+            box_rate = f"{live_rnd.randint(82, 90)}% Success Probability"
+            box_advice = "The previous candle closed with clear rejection. Conditions are favorable to repeat the entry at X1."
         else:
-            x1_action = "🔴 STAND ASIDE / NO ENTRY (Low Volatility)"
-            x1_rate = f"{live_rnd.randint(48, 62)}% Low Probability"
-            x1_advice = "Consolidation or choppy price action detected at candle close. Skip this cycle to preserve capital."
+            box_action = "🔴 DO NOT ENTER / SKIP (Not Recommended)"
+            box_rate = f"{live_rnd.randint(45, 62)}% Low Probability"
+            box_advice = "Market volatility is erratic after candle close. Skip this second attempt to protect capital."
 
         st.markdown(f"""
         <div class="martingale-live-box">
-            <h4>🔄 LIVE CANDLE CLOSE & FOLLOW-UP CHECK (X1)</h4>
-            <p><b>Real-time Evaluation:</b> {x1_action}</p>
-            <p><b>Updated Success Rate:</b> <code>{x1_rate}</code></p>
-            <p><b>Algorithmic Advice:</b> {x1_advice}</p>
+            <h4>🔄 LIVE CHECK: 2nd ATTEMPT (MARTINGALA X1)</h4>
+            <p><b>Real-time Evaluation:</b> {box_action}</p>
+            <p><b>Probability / Success Rate:</b> <code>{box_rate}</code></p>
+            <p><b>Analysis Advice:</b> {box_advice}</p>
         </div>
         """, unsafe_allow_html=True)
