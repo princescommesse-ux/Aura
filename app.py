@@ -6,7 +6,7 @@ import streamlit as st
 
 # Page configuration
 st.set_page_config(
-    page_title="Aura Pro Forex Panel - Elite Edition", 
+    page_title="Aura Pro", 
     page_icon="⚡", 
     layout="centered"
 )
@@ -20,6 +20,7 @@ st.markdown(
     .stButton>button:hover { background-color: #333333; color: #ffffff; border-color: #00ffcc; }
     .countdown-box { font-size: 24px; font-weight: bold; color: #00ffcc; text-align: center; background-color: #1f1f1f; padding: 10px; border-radius: 8px; border: 1px solid #333333; }
     .metrics-box { background-color: #1a1a1a; padding: 15px; border-radius: 8px; border: 1px solid #333333; margin-bottom: 15px; }
+    .market-badge { background-color: #1f1f1f; padding: 8px 12px; border-radius: 6px; border: 1px solid #333333; font-size: 14px; margin-bottom: 15px; text-align: center; }
     </style>
     """, 
     unsafe_allow_html=True,
@@ -34,6 +35,25 @@ assets = [
 ]
 
 selected_asset = st.selectbox("Select Currency Pair", assets)
+
+# Funzione per calcolare le sessioni di mercato attive (basata su orario UTC)
+def get_market_sessions():
+    utc_hour = datetime.utcnow().hour
+    active = []
+    
+    if 0 <= utc_hour < 9:
+        active.append("Tokyo 🟢")
+    if 8 <= utc_hour < 16:
+        active.append("London 🟢")
+    if 13 <= utc_hour < 21:
+        active.append("New York 🟢")
+        
+    if not active:
+        return "Low Liquidity / Asian Session 🌙"
+    return " | ".join(active)
+
+# Mostra lo stato delle sessioni di mercato in tempo reale
+st.markdown(f'<div class="market-badge">🌐 <b>Market Sessions:</b> {get_market_sessions()}</div>', unsafe_allow_html=True)
 
 st.markdown("### ⏰ Timeframe")
 
@@ -70,7 +90,7 @@ def send_telegram_alert(asset, timeframe, direction, win_rate, confidence, entry
         return
         
     message = (
-        f"⚡ *AURA PRO ELITE SIGNAL* ⚡\n\n"
+        f"⚡ *AURA PRO SIGNAL* ⚡\n\n"
         f"🔹 *Asset:* `{asset}`\n"
         f"⏰ *Timeframe:* `{timeframe}`\n"
         f"🎯 *Direction:* *{direction}*\n"
@@ -120,7 +140,7 @@ if st.button("🚀 Run High-Precision Analysis"):
         
         if tf_choice == "M15 (900s)":
             st.session_state.cached_win_rate = "88.5% - 91.0%"
-            st.session_state.cached_confidence = "Maximum (Elite Confluence)"
+            st.session_state.cached_confidence = "Maximum (Confluence)"
         elif tf_choice == "M10 (600s)":
             st.session_state.cached_win_rate = "85.0% - 88.0%"
             st.session_state.cached_confidence = "Very High (Strong Trend)"
@@ -147,10 +167,10 @@ if st.button("🚀 Run High-Precision Analysis"):
         )
 
     with st.spinner(f"Processing high-precision multi-timeframe models for {selected_asset}..."):
-        st.success("Elite analysis generated successfully! (Sent to Telegram)")
+        st.success("Analysis generated successfully! (Sent to Telegram)")
         
-        # Professional English Output with clean Markdown layout
-        st.markdown("### 💎 ELITE SIGNAL RESULTS")
+        # Professional English Output with clean Markdown layout and double diamonds
+        st.markdown("### 💎 SIGNAL RESULTS 💎")
         st.markdown(f"""
         * **Asset:** `{selected_asset}`
         * **Timeframe:** `{tf_choice}`
