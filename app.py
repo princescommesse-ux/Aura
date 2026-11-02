@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta
 import random
-import time
 import requests
 import streamlit as st
 import streamlit.components.v1 as components
@@ -21,8 +20,6 @@ st.markdown(
     .stButton>button:hover { background-color: #333333; color: #ffffff; border-color: #00ffcc; }
     .countdown-box { font-size: 28px; font-weight: bold; color: #00ffcc; text-align: center; background-color: #1f1f1f; padding: 12px; border-radius: 8px; border: 1px solid #333333; margin-bottom: 10px; }
     .market-badge { background-color: #1f1f1f; padding: 8px 12px; border-radius: 6px; border: 1px solid #333333; font-size: 14px; margin-bottom: 15px; text-align: center; }
-    .signal-box { background-color: #1e1e1e; padding: 15px; border-radius: 8px; border: 1px solid #00ffcc; margin-top: 15px; }
-    .tracker-box { background-color: #1a1a1a; padding: 15px; border-radius: 8px; border: 1px solid #333333; margin-top: 20px; text-align: center; }
     </style>
     """, 
     unsafe_allow_html=True,
@@ -131,12 +128,6 @@ if "cached_time" not in st.session_state:
 if "cached_confidence" not in st.session_state:
     st.session_state.cached_confidence = None
 
-# Session Win/Loss Tracker State
-if "wins" not in st.session_state:
-    st.session_state.wins = 0
-if "losses" not in st.session_state:
-    st.session_state.losses = 0
-
 if st.button("🚀 Run High-Precision Analysis"):
     seed_val = hash(selected_asset + tf_choice + str(datetime.now()))
     rnd = random.Random(seed_val)
@@ -208,41 +199,3 @@ if st.session_state.signal_active:
     </script>
     """
     components.html(timer_html, height=80)
-
-    st.markdown(f"""
-    <div class="signal-box">
-        <h4>🎯 TRADE IN PROGRESS</h4>
-        <p><b>Target Direction:</b> <b>{st.session_state.cached_direction}</b></p>
-        <p><b>Strategy:</b> Single-Shot Execution at 1% Fixed Capital.</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-# --- SESSION WIN / LOSS TRACKER ---
-st.markdown("---")
-st.markdown("### 📊 Session Performance Tracker")
-
-total_trades = st.session_state.wins + st.session_state.losses
-win_rate_session = (st.session_state.wins / total_trades * 100) if total_trades > 0 else 0.0
-
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.metric(label="🟢 Wins", value=st.session_state.wins)
-with col2:
-    st.metric(label="🔴 Losses", value=st.session_state.losses)
-with col3:
-    st.metric(label="📈 Win Rate", value=f"{win_rate_session:.1f}%")
-
-col_w, col_l, col_r = st.columns(3)
-with col_w:
-    if st.button("➕ Win"):
-        st.session_state.wins += 1
-        st.rerun()
-with col_l:
-    if st.button("➖ Loss"):
-        st.session_state.losses += 1
-        st.rerun()
-with col_r:
-    if st.button("🔄 Reset Tracker"):
-        st.session_state.wins = 0
-        st.session_state.losses = 0
-        st.rerun()
