@@ -20,7 +20,7 @@ st.markdown(
     .stButton>button:hover { background-color: #333333; color: #ffffff; border-color: #00ffcc; }
     .countdown-box { font-size: 24px; font-weight: bold; color: #00ffcc; text-align: center; background-color: #1f1f1f; padding: 10px; border-radius: 8px; border: 1px solid #333333; }
     .market-badge { background-color: #1f1f1f; padding: 8px 12px; border-radius: 6px; border: 1px solid #333333; font-size: 14px; margin-bottom: 15px; text-align: center; }
-    .payout-box { background-color: #1a1a1a; padding: 10px; border-radius: 6px; border: 1px solid #333333; font-size: 13px; margin-bottom: 15px; }
+    .payout-box { background-color: #1a1a1a; padding: 10px; border-radius: 6px; border: 1px solid #333333; font-size: 14px; margin-bottom: 15px; }
     </style>
     """, 
     unsafe_allow_html=True,
@@ -28,27 +28,36 @@ st.markdown(
 
 st.title("⚡ AURA PRO ⚡")
 
-# Top 10 Elite Currency Pairs
-assets = [
-    "EUR/USD", "GBP/USD", "USD/JPY", "AUD/USD", "USD/CAD",
-    "USD/CHF", "GBP/JPY", "EUR/JPY", "EUR/GBP", "AUD/JPY"
-]
+# Top 10 Elite Currency Pairs with Flag Emojis
+assets_dict = {
+    "🇪🇺/🇺🇸 EUR/USD": "EUR/USD",
+    "🇬🇧/🇺🇸 GBP/USD": "GBP/USD",
+    "🇺🇸/🇯🇵 USD/JPY": "USD/JPY",
+    "🇦🇺/🇺🇸 AUD/USD": "AUD/USD",
+    "🇺🇸/🇨🇦 USD/CAD": "USD/CAD",
+    "🇺🇸/🇨🇭 USD/CHF": "USD/CHF",
+    "🇬🇧/🇯🇵 GBP/JPY": "GBP/JPY",
+    "🇪🇺/🇯🇵 EUR/JPY": "EUR/JPY",
+    "🇪🇺/🇬🇧 EUR/GBP": "EUR/GBP",
+    "🇦🇺/🇯🇵 AUD/JPY": "AUD/JPY"
+}
+
+selected_display = st.selectbox("Select Currency Pair", list(assets_dict.keys()))
+selected_asset = assets_dict[selected_display]
 
 # Funzione per simulare i payout live simili a Pocket Option (es. tra 82% e 90%)
-def get_live_payouts(asset_list):
+def get_live_payouts(asset_dict):
     payouts = {}
-    rnd = random.Random(datetime.now().minute // 2) # Cambia leggermente ogni 2 minuti
-    for asset in asset_list:
-        payouts[asset] = f"+{rnd.randint(82, 90)}%"
+    rnd = random.Random(datetime.now().minute // 2)
+    for display_name, code in asset_dict.items():
+        payouts[code] = f"+{rnd.randint(82, 90)}%"
     return payouts
 
-live_payouts = get_live_payouts(assets)
-
-selected_asset = st.selectbox("Select Currency Pair", assets)
-
-# Mostra il payout in tempo reale dell'asset selezionato
+live_payouts = get_live_payouts(assets_dict)
 current_payout = live_payouts[selected_asset]
-st.markdown(f'<div class="payout-box">📊 <b>Pocket Option Payout ({selected_asset}):</b> <span style="color: #00ffcc; font-weight: bold;">{current_payout}</span></div>', unsafe_allow_html=True)
+
+# Mostra il payout in tempo reale dell'asset selezionato con le bandiere
+st.markdown(f'<div class="payout-box">📊 <b>Pocket Option Payout ({selected_display}):</b> <span style="color: #00ffcc; font-weight: bold;">{current_payout}</span></div>', unsafe_allow_html=True)
 
 # Funzione per calcolare le sessioni di mercato attive (basata su orario UTC)
 def get_market_sessions():
@@ -96,7 +105,7 @@ def get_next_candle_time(seconds):
     return future.strftime("%H:%M:%S")
 
 # Funzione per inviare il segnale su Telegram
-def send_telegram_alert(asset, timeframe, direction, win_rate, confidence, entry_time, payout):
+def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence, entry_time, payout):
     bot_token = "INSERISCI_QUI_IL_TUO_BOT_TOKEN"
     chat_id = "INSERISCI_QUI_IL_TUO_CHAT_ID"
     
@@ -105,7 +114,7 @@ def send_telegram_alert(asset, timeframe, direction, win_rate, confidence, entry
         
     message = (
         f"⚡ *AURA PRO SIGNAL* ⚡\n\n"
-        f"🔹 *Asset:* `{asset}` (Payout: `{payout}`)\n"
+        f"🔹 *Asset:* `{display_name}` (Payout: `{payout}`)\n"
         f"⏰ *Timeframe:* `{timeframe}`\n"
         f"🎯 *Direction:* *{direction}*\n"
         f"🕒 *Entry Time:* `{entry_time}`\n"
@@ -172,7 +181,7 @@ if st.button("🚀 Run High-Precision Analysis"):
         st.session_state.last_tf = tf_choice
         
         send_telegram_alert(
-            selected_asset, 
+            selected_display, 
             tf_choice, 
             st.session_state.cached_direction, 
             st.session_state.cached_win_rate, 
@@ -181,13 +190,13 @@ if st.button("🚀 Run High-Precision Analysis"):
             current_payout
         )
 
-    with st.spinner(f"Processing high-precision multi-timeframe models for {selected_asset}..."):
+    with st.spinner(f"Processing high-precision multi-timeframe models for {selected_display}..."):
         st.success("Analysis generated successfully! (Sent to Telegram)")
         
         # Professional English Output with clean Markdown layout and double diamonds
         st.markdown("### 💎 SIGNAL RESULTS 💎")
         st.markdown(f"""
-        * **Asset:** `{selected_asset}` (Payout: `{current_payout}`)
+        * **Asset:** `{selected_display}` (Payout: `{current_payout}`)
         * **Timeframe:** `{tf_choice}`
         * **Signal Direction:** **{st.session_state.cached_direction}**
         * **Entry Time (Candle Close):** `{st.session_state.cached_time}`
