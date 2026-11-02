@@ -3,6 +3,7 @@ import random
 import time
 import requests
 import streamlit as st
+import streamlit.components.v1 as components
 
 # Page configuration
 st.set_page_config(
@@ -18,7 +19,7 @@ st.markdown(
     .main { background-color: #121212; color: #ffffff; }
     .stButton>button { width: 100%; border-radius: 8px; font-weight: bold; background-color: #1f1f1f; color: #00ffcc; border: 1px solid #333333; }
     .stButton>button:hover { background-color: #333333; color: #ffffff; border-color: #00ffcc; }
-    .countdown-box { font-size: 24px; font-weight: bold; color: #00ffcc; text-align: center; background-color: #1f1f1f; padding: 10px; border-radius: 8px; border: 1px solid #333333; }
+    .countdown-box { font-size: 28px; font-weight: bold; color: #00ffcc; text-align: center; background-color: #1f1f1f; padding: 12px; border-radius: 8px; border: 1px solid #333333; margin-bottom: 10px; }
     .market-badge { background-color: #1f1f1f; padding: 8px 12px; border-radius: 6px; border: 1px solid #333333; font-size: 14px; margin-bottom: 15px; text-align: center; }
     .martingale-live-box { background-color: #1e1e1e; padding: 15px; border-radius: 8px; border: 1px solid #00ffcc; margin-top: 15px; }
     </style>
@@ -28,7 +29,7 @@ st.markdown(
 
 st.title("⚡ AURA PRO ⚡")
 
-# Top 10 Elite Currency Pairs with Yahoo Finance Ticker Mapping
+# Top 10 Elite Currency Pairs with Yahoo Finance Ticker Mapping (No slash between flags)
 assets_dict = {
     "🇪🇺🇺🇸 EUR/USD": {"symbol": "EURUSD=X", "api": "EURUSD=X"},
     "🇬🇧🇺🇸 GBP/USD": {"symbol": "GBPUSD=X", "api": "GBPUSD=X"},
@@ -46,8 +47,8 @@ selected_display = st.selectbox("Select Currency Pair", list(assets_dict.keys())
 asset_info = assets_dict[selected_display]
 selected_asset = asset_info["symbol"]
 
-# Function to fetch live candle outcome via Yahoo Finance API
-def get_live_candle_outcome(ticker, signal_direction):
+# Function to fetch live candle outcome and exact pips distance via Yahoo Finance API
+def get_live_candle_outcome_with_pips(ticker, signal_direction):
     try:
         url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1m&range=5m"
         headers = {'User-Agent': 'Mozilla/5.0'}
@@ -66,14 +67,24 @@ def get_live_candle_outcome(ticker, signal_direction):
             candle_open = m_open[0]
             candle_close = m_close[-1]
             
+            # Calcolo scarto in pips in tempo reale
+            diff = candle_close - candle_open
+            if "JPY" in ticker:
+                pips_val = round(abs(diff) * 100, 1)
+            else:
+                pips_val = round(abs(diff) * 10000, 1)
+                
             if "BUY" in signal_direction:
                 is_win = candle_close > candle_open
+                pips_text = f"+{pips_val} pips (In Profit)" if is_win else f"-{pips_val} pips (In Loss)"
             else:
                 is_win = candle_close < candle_open
-            return is_win, candle_open, candle_close
+                pips_text = f"+{pips_val} pips (In Profit)" if is_win else f"-{pips_val} pips (In Loss)"
+                
+            return is_win, candle_open, candle_close, pips_text
     except Exception:
         pass
-    return None
+    return None, 0, 0, "0.0 pips"
 
 # Function to calculate active market sessions
 def get_market_sessions():
@@ -194,7 +205,7 @@ if st.button("🚀 Run High-Precision Analysis"):
         st.session_state.cached_time
     )
 
-# --- RENDER PERSISTENT SIGNAL & REAL-TIME COUNTDOWN ---
+# --- RENDER PERSISTENT SIGNAL & LIVE RUNNING TIMER ---
 if st.session_state.signal_active:
     st.success("Analysis generated successfully! (Sent to Telegram)")
     
@@ -212,41 +223,53 @@ if st.session_state.signal_active:
     st.markdown("### ⏳ Current Candle Countdown")
     
     initial_left = get_seconds_to_next_candle(st.session_state.cached_tf_seconds)
-    mins, secs = divmod(initial_left, 60)
-    st.markdown(f'<div class="countdown-box">⏱️ {mins:02d}:{secs:02d}</div>', unsafe_allow_html=True)
     
-    # Pulsante per aggiornare il timer manualmente
-    if st.button("🔄 Refresh Timer"):
-        st.rerun()
+    # Timer in tempo reale autonomo
+    timer_html = f"""
+    <div style="font-size: 32px; font-weight: bold; color: #00ffcc; text-align: center; background-color: #1f1f1f; padding: 15px; border-radius: 8px; border: 1px solid #333333;" id="countdown">
+        Loading timer...
+    </div>
+    <script>
+    var timeLeft = {initial_left};
+    function updateTimer() {{
+        var minutes = Math.floor(timeLeft / 60);
+        var seconds = timeLeft % 60;
+        minutes = minutes < 10 ? "0" + minutes : minutes;
+        seconds = seconds < 10 ? "0" + seconds : seconds;
+        document.getElementById("countdown").innerHTML = "⏱️ " + minutes + ":" + seconds;
+        if (timeLeft > 0) {{
+            timeLeft--;
+        }}
+    }}
+    setInterval(updateTimer, 1000);
+    updateTimer();
+    </script>
+    """
+    components.html(timer_html, height=80)
 
-    # --- CONTROLLO ESATTAMENTE NELL'ULTIMO MINUTO (<= 60 SECONDI) ---
+    # --- CONTROLLO ULTIMO MINUTO (ATTIVO AUTOMATICAMENTE SOTTO I 60 SECONDI) ---
     if initial_left <= 60:
         st.markdown("### ⚡ LAST MINUTE CHECK (FINAL 60s)")
         if st.button("🔍 Check Market & X1 Verdict"):
             current_dir = st.session_state.cached_direction
-            real_check = get_live_candle_outcome(st.session_state.cached_asset_api, current_dir)
-            
-            if real_check is not None:
-                is_win, c_open, c_close = real_check
-            else:
-                is_win = False
+            is_win, c_open, c_close, pips_text = get_live_candle_outcome_with_pips(st.session_state.cached_asset_api, current_dir)
             
             if is_win:
-                outcome_text = "🟢 1st ATTEMPT: WIN (ITM)"
+                outcome_text = f"🟢 1st ATTEMPT: WIN (ITM) [{pips_text}]"
                 decision_banner = "🎉 **RESULT: WIN!** Target reached successfully."
-                advice_text = f"The price is currently moving in our favor ({current_dir}). Market conditions are positive."
+                advice_text = f"The price is currently in profit with a distance of {pips_text} towards our direction ({current_dir})."
             else:
                 live_seed = hash(st.session_state.cached_asset_api + st.session_state.cached_tf_choice + str(datetime.now().minute))
                 live_rnd = random.Random(live_seed)
                 is_conviene_x1 = live_rnd.random() > 0.30
                 
-                outcome_text = "🔴 1st ATTEMPT: LOSS (OTM)"
+                outcome_text = f"🔴 1st ATTEMPT: LOSS (OTM) [{pips_text}]"
                 if is_conviene_x1:
                     decision_banner = f"✅ **VERDICT: RECOMMENDED TO ENTER X1 ({current_dir})**"
-                    advice_text = f"Price is currently against us, but strong rejection is detected on the level. Good setup to enter X1 maintaining direction {current_dir}."
+                    advice_text = f"Current distance: {pips_text}. Strong market rejection detected on the level. Good setup to enter X1 maintaining direction {current_dir}."
                 else:
                     decision_banner = "❌ **VERDICT: STAND ASIDE / SKIP TURN**"
-                    advice_text = "Unfavorable price action detected in the final seconds. Avoid entering X1 to protect capital."
+                    advice_text = f"Current distance: {pips_text}. Unfavorable price action detected in the final seconds. Avoid entering X1 to protect capital."
             
             st.session_state.cached_live_eval = {
                 "outcome": outcome_text,
