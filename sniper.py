@@ -277,4 +277,4 @@ if st.session_state.signal_active:
     updateTimer();
     </script>
     """
-    components.html(timer_html, height=80)
+    components.html(timer_html, height=80) 
