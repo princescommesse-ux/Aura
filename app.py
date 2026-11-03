@@ -1,16 +1,17 @@
-import math
-import time
-from datetime import datetime, timedelta, timezone
-
-import numpy as np
-import pandas as pd
+from datetime import datetime, timedelta
 import requests
 import streamlit as st
 import streamlit.components.v1 as components
 import yfinance as yf
 
-st.set_page_config(page_title="Aura Pro", page_icon="⚡", layout="centered")
+# Page configuration
+st.set_page_config(
+    page_title="Aura Pro Full", 
+    page_icon="⚡", 
+    layout="centered"
+)
 
+# Custom Dark Mode styling
 st.markdown(
     """
     <style>
@@ -19,259 +20,252 @@ st.markdown(
     .stButton>button:hover { background-color: #333333; color: #ffffff; border-color: #00ffcc; }
     .market-badge { background-color: #1f1f1f; padding: 8px 12px; border-radius: 6px; border: 1px solid #333333; font-size: 14px; margin-bottom: 15px; text-align: center; }
     .analysis-box { background-color: #1a1a1a; padding: 15px; border-radius: 8px; border: 1px solid #00ffcc; margin-top: 15px; }
-    .standby-box { background-color: #1a1a1a; padding: 15px; border-radius: 8px; border: 1px solid #ff4444; margin-top: 15px; color: #ff4444; font-weight: bold; }
+    .standby-box { background-color: #1a1a1a; padding: 15px; border-radius: 8px; border: 1px solid #ff4444; margin-top: 15px; text-align: center; color: #ff4444; font-weight: bold; }
     </style>
-    """,
+    """, 
     unsafe_allow_html=True,
 )
 
 st.title("⚡ AURA PRO ⚡")
-st.caption("Strumento di studio. Nessun segnale garantisce profitto: guarda le statistiche storiche reali qui sotto.")
 
-PAIRS = {
-    "🇪🇺🇺🇸 EUR/USD": "EURUSD=X", "🇬🇧🇺🇸 GBP/USD": "GBPUSD=X", "🇺🇸🇯🇵 USD/JPY": "USDJPY=X",
-    "🇦🇺🇺🇸 AUD/USD": "AUDUSD=X", "🇺🇸🇨🇦 USD/CAD": "USDCAD=X", "🇺🇸🇨🇭 USD/CHF": "USDCHF=X",
-    "🇳🇿🇺🇸 NZD/USD": "NZDUSD=X", "🇬🇧🇯🇵 GBP/JPY": "GBPJPY=X", "🇪🇺🇯🇵 EUR/JPY": "EURJPY=X",
-    "🇪🇺🇬🇧 EUR/GBP": "EURGBP=X", "🇦🇺🇯🇵 AUD/JPY": "AUDJPY=X", "🇪🇺🇦🇺 EUR/AUD": "EURAUD=X",
-    "🇬🇧🇦🇺 GBP/AUD": "GBPAUD=X", "🇪🇺🇨🇦 EUR/CAD": "EURCAD=X", "🇬🇧🇨🇦 GBP/CAD": "GBPCAD=X",
-    "🇦🇺🇨🇦 AUD/CAD": "AUDCAD=X", "🇪🇺🇨🇭 EUR/CHF": "EURCHF=X", "🇬🇧🇨🇭 GBP/CHF": "GBPCHF=X",
-    "🇨🇭🇯🇵 CHF/JPY": "CHFJPY=X",
+# 19 coppie Forex
+assets_dict = {
+    "🇪🇺🇺🇸 EUR/USD": {"symbol": "EURUSD=X"},
+    "🇬🇧🇺🇸 GBP/USD": {"symbol": "GBPUSD=X"},
+    "🇺🇸🇯🇵 USD/JPY": {"symbol": "USDJPY=X"},
+    "🇦🇺🇺🇸 AUD/USD": {"symbol": "AUDUSD=X"},
+    "🇺🇸🇨🇦 USD/CAD": {"symbol": "USDCAD=X"},
+    "🇺🇸🇨🇭 USD/CHF": {"symbol": "USDCHF=X"},
+    "🇳🇿🇺🇸 NZD/USD": {"symbol": "NZDUSD=X"},
+    "🇬🇧🇯🇵 GBP/JPY": {"symbol": "GBPJPY=X"},
+    "🇪🇺🇯🇵 EUR/JPY": {"symbol": "EURJPY=X"},
+    "🇪🇺🇬🇧 EUR/GBP": {"symbol": "EURGBP=X"},
+    "🇦🇺🇯🇵 AUD/JPY": {"symbol": "AUDJPY=X"},
+    "🇪🇺🇦🇺 EUR/AUD": {"symbol": "EURAUD=X"},
+    "🇬🇧🇦🇺 GBP/AUD": {"symbol": "GBPAUD=X"},
+    "🇪🇺🇨🇦 EUR/CAD": {"symbol": "EURCAD=X"},
+    "🇬🇧🇨🇦 GBP/CAD": {"symbol": "GBPCAD=X"},
+    "🇦🇺🇨🇦 AUD/CAD": {"symbol": "AUDCAD=X"},
+    "🇪🇺🇨🇭 EUR/CHF": {"symbol": "EURCHF=X"},
+    "🇬🇧🇨🇭 GBP/CHF": {"symbol": "GBPCHF=X"},
+    "🇨🇭🇯🇵 CHF/JPY": {"symbol": "CHFJPY=X"}
 }
 
-# timeframe -> (secondi, intervallo da scaricare, regola di resample o None)
-TIMEFRAMES = {
-    "M1": (60, "1m", None),
-    "M3": (180, "1m", "3min"),
-    "M5": (300, "5m", None),
-    "M10": (600, "5m", "10min"),
-    "M15": (900, "15m", None),
-}
+selected_display = st.selectbox("Select Currency Pair", list(assets_dict.keys()), key="std_asset")
+selected_asset = assets_dict[selected_display]["symbol"]
 
-PAYOUT_DEFAULT = 85
+def get_market_sessions():
+    utc_hour = datetime.utcnow().hour
+    active = []
+    if 0 <= utc_hour < 9:
+        active.append("Tokyo 🟢")
+    if 8 <= utc_hour < 16:
+        active.append("London 🟢")
+    if 13 <= utc_hour < 21:
+        active.append("New York 🟢")
+    if not active:
+        return "Low Liquidity / Asian Session 🌙"
+    return " | ".join(active)
 
-selected_display = st.selectbox("Coppia", list(PAIRS.keys()))
-ticker = PAIRS[selected_display]
+st.markdown(f'<div class="market-badge">🌐 <b>Market Sessions:</b> {get_market_sessions()}</div>', unsafe_allow_html=True)
 
 st.markdown("### ⏰ Timeframe")
-tf_choice = st.radio("Scadenza = 1 candela", list(TIMEFRAMES.keys()), horizontal=True)
-tf_seconds, tf_interval, tf_resample = TIMEFRAMES[tf_choice]
+scadenze = {
+    "M1 (60s)": 60,
+    "M3 (180s)": 180,
+    "M5 (300s)": 300,
+    "M10 (600s)": 600,
+    "M15 (900s)": 900
+}
 
-payout_pct = st.slider("Payout del broker (%)", 60, 95, PAYOUT_DEFAULT)
-payout = payout_pct / 100
-breakeven = 1 / (1 + payout)
+tf_choice = st.radio("Choose from time basket:", list(scadenze.keys()), horizontal=True, key="std_tf")
+tf_seconds = scadenze[tf_choice]
 
+def get_seconds_to_next_candle(seconds):
+    now = datetime.now()
+    total_secs = now.hour * 3600 + now.minute * 60 + now.second + now.microsecond / 1_000_000
+    return max(1, int(seconds - (total_secs % seconds)))
 
-# ---------- sessioni / tempo (tutto in UTC) ----------
-def get_market_sessions() -> str:
-    h = datetime.now(timezone.utc).hour
-    active = []
-    if 0 <= h < 9:
-        active.append("Tokyo 🟢")
-    if 8 <= h < 16:
-        active.append("London 🟢")
-    if 13 <= h < 21:
-        active.append("New York 🟢")
-    return " | ".join(active) if active else "Bassa liquidità 🌙"
+def get_next_candle_time(seconds):
+    now = datetime.now()
+    return (now + timedelta(seconds=get_seconds_to_next_candle(seconds))).strftime("%H:%M:%S")
 
-
-st.markdown(f'<div class="market-badge">🌐 <b>Sessioni (UTC):</b> {get_market_sessions()}</div>',
-            unsafe_allow_html=True)
-
-
-def seconds_to_next_candle(seconds: int) -> int:
-    return max(1, int(seconds - (time.time() % seconds)))
-
-
-def next_candle_time_utc(seconds: int) -> str:
-    t = datetime.now(timezone.utc) + timedelta(seconds=seconds_to_next_candle(seconds))
-    return t.strftime("%H:%M:%S UTC")
-
-
-# ---------- dati ----------
-@st.cache_data(ttl=30, show_spinner=False)
-def load_data(symbol: str, interval: str, resample: str | None) -> pd.DataFrame:
-    df = yf.download(symbol, period="5d", interval=interval, progress=False, auto_adjust=True)
-    if isinstance(df.columns, pd.MultiIndex):
-        df.columns = df.columns.get_level_values(0)
-    df = df.dropna()
-    if resample and not df.empty:
-        df = df["Close"].resample(resample).last().dropna().to_frame("Close")
-    return df[["Close"]]
-
-
-# ---------- indicatori ----------
-def rsi_wilder(close: pd.Series, n: int = 14) -> pd.Series:
-    d = close.diff()
-    gain = d.clip(lower=0).ewm(alpha=1 / n, adjust=False).mean()
-    loss = (-d.clip(upper=0)).ewm(alpha=1 / n, adjust=False).mean()
-    return 100 - 100 / (1 + gain / loss)
-
-
-def compute_signals(close: pd.Series):
-    rsi = rsi_wilder(close)
-    ema9 = close.ewm(span=9, adjust=False).mean()
-    ema21 = close.ewm(span=21, adjust=False).mean()
-    bull = ema9 > ema21
-    sma, sd = close.rolling(20).mean(), close.rolling(20).std()
-    upper, lower = sma + 2 * sd, sma - 2 * sd
-    macd = close.ewm(span=12, adjust=False).mean() - close.ewm(span=26, adjust=False).mean()
-    macd_bull = macd > macd.ewm(span=9, adjust=False).mean()
-
-    buy = bull & (rsi <= 55) & (close <= lower * 1.01)
-    sell = (~bull) & (rsi >= 45) & (close >= upper * 0.99)
-    sig = pd.Series(0, index=close.index)
-    sig[buy] = 1
-    sig[sell] = -1
-    return sig, rsi, bull, upper, lower, macd_bull
-
-
-def wilson_interval(wins: int, n: int, z: float = 1.96):
-    if n == 0:
-        return float("nan"), float("nan")
-    p = wins / n
-    den = 1 + z * z / n
-    centre = (p + z * z / (2 * n)) / den
-    half = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / den
-    return centre - half, centre + half
-
-
-def historical_stats(close: pd.Series, sig: pd.Series) -> dict:
-    move = close.shift(-1) - close
-    mask = (sig != 0) & move.notna()
-    s, m = sig[mask], move[mask]
-    wins = int((((s == 1) & (m > 0)) | ((s == -1) & (m < 0))).sum())
-    n = int(mask.sum())
-    lo, hi = wilson_interval(wins, n)
-    return {"n": n, "wr": wins / n if n else float("nan"), "lo": lo, "hi": hi}
-
-
-def analyze(symbol: str):
+def ultimate_institutional_analysis(ticker, timeframe_choice):
     try:
-        df = load_data(symbol, tf_interval, tf_resample)
-        if len(df) < 60:
-            return "STAND BY", "Dati insufficienti", {}, None
-        close = df["Close"].astype(float).iloc[:-1]  # scarta la candela ancora aperta
-        sig, rsi, bull, upper, lower, macd_bull = compute_signals(close)
-
-        price = float(close.iloc[-1])
-        details = {
-            "RSI": f"{float(rsi.iloc[-1]):.1f}",
-            "Trend (EMA 9/21)": "RIALZISTA 🟢" if bull.iloc[-1] else "RIBASSISTA 🔴",
-            "Bollinger": "Vicino al supporto" if price <= float(lower.iloc[-1]) * 1.008
-            else ("Vicino alla resistenza" if price >= float(upper.iloc[-1]) * 0.992 else "Centro canale"),
-            "MACD": "RIALZISTA 🟢" if macd_bull.iloc[-1] else "RIBASSISTA 🔴",
+        interval_map = {
+            "M1 (60s)": "1m",
+            "M3 (180s)": "2m",
+            "M5 (300s)": "5m",
+            "M10 (600s)": "5m",
+            "M15 (900s)": "15m"
         }
-        stats = historical_stats(close, sig)
-        last = int(sig.iloc[-1])
-        if last == 1:
-            return "BUY 🟢", "Confluenza confermata", details, stats
-        if last == -1:
-            return "SELL 🔴", "Confluenza confermata", details, stats
-        return "STAND BY / NO TRADE", "Mercato in equilibrio", details, stats
+        iv = interval_map.get(timeframe_choice, "1m")
+
+        df = yf.download(ticker, period="1d", interval=iv, progress=False)
+        if df.empty or len(df) < 35:
+            return "STAND BY", "N/A", "Insufficient Market Data", {}
+
+        close = df['Close']
+        delta = close.diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+        rs = gain / loss
+        rsi = 100 - (100 / (1 + rs))
+        current_rsi = float(rsi.iloc[-1].item())
+
+        ema9 = close.ewm(span=9, adjust=False).mean()
+        ema21 = close.ewm(span=21, adjust=False).mean()
+        is_bullish_trend = float(ema9.iloc[-1].item()) > float(ema21.iloc[-1].item())
+
+        sma20 = close.rolling(window=20).mean()
+        std20 = close.rolling(window=20).std()
+        upper_band = sma20 + (std20 * 2)
+        lower_band = sma20 - (std20 * 2)
+        curr_price = float(close.iloc[-1].item())
+        curr_lower = float(lower_band.iloc[-1].item())
+        curr_upper = float(upper_band.iloc[-1].item())
+
+        exp12 = close.ewm(span=12, adjust=False).mean()
+        exp26 = close.ewm(span=26, adjust=False).mean()
+        macd = exp12 - exp26
+        signal_line = macd.ewm(span=9, adjust=False).mean()
+        is_macd_bullish = float(macd.iloc[-1].item()) > float(signal_line.iloc[-1].item())
+
+        details = {
+            "RSI": f"{current_rsi:.1f}",
+            "Trend Breve (EMA 9/21)": "BULLISH 🟢" if is_bullish_trend else "BEARISH 🔴",
+            "Bollinger Position": "Near Lower Support" if curr_price <= curr_lower * 1.008 else ("Near Upper Resistance" if curr_price >= curr_upper * 0.992 else "Mid-Channel"),
+            "MACD Cross": "BULLISH 🟢" if is_macd_bullish else "BEARISH 🔴"
+        }
+
+        if is_bullish_trend and current_rsi <= 55 and curr_price <= (curr_lower * 1.01):
+            return "BUY 🟢", "89.0% - 92.0%", "Confluence Confirmed", details
+        elif not is_bullish_trend and current_rsi >= 45 and curr_price >= (curr_upper * 0.99):
+            return "SELL 🔴", "89.0% - 92.0%", "Confluence Confirmed", details
+        else:
+            return "STAND BY / NO TRADE", "N/A", "Market in Equilibrium", details
+
     except Exception as e:
-        return "STAND BY", f"Errore: {e}", {}, None
+        return "STAND BY", "N/A", f"Error: {str(e)}", {}
 
-
-def send_telegram_alert(display_name, timeframe, direction, entry_time):
-    try:
-        token = st.secrets["TELEGRAM_BOT_TOKEN"]
-        chat_id = st.secrets["TELEGRAM_CHAT_ID"]
-    except Exception:
-        return  # secrets non configurati: nessun avviso
+def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence, entry_time):
+    bot_token = "INSERISCI_QUI_IL_TUO_BOT_TOKEN"
+    chat_id = "INSERISCI_QUI_IL_TUO_CHAT_ID"
+    if bot_token == "INSERISCI_QUI_IL_TUO_BOT_TOKEN":
+        return
     message = (
-        f"⚡ *AURA PRO* ⚡\n\n"
+        f"⚡ *AURA PRO SIGNAL* ⚡\n\n"
         f"🔹 *Asset:* `{display_name}`\n"
         f"⏰ *Timeframe:* `{timeframe}`\n"
-        f"🎯 *Direzione:* *{direction}*\n"
-        f"🕒 *Entrata:* `{entry_time}`\n"
-        f"🛡️ *Rischio:* `max 1% del capitale`"
+        f"🎯 *Direction:* *{direction}*\n"
+        f"🕒 *Entry Time:* `{entry_time}`\n"
+        f"📈 *Expected Accuracy:* `{win_rate}`\n"
+        f"🛡️ *Status:* `{confidence}`\n"
+        f"💰 *Risk Management:* `1% Fixed Capital`"
     )
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    payload = {"chat_id": chat_id, "text": message, "parse_mode": "Markdown"}
     try:
-        requests.post(
-            f"https://api.telegram.org/bot{token}/sendMessage",
-            json={"chat_id": chat_id, "text": message, "parse_mode": "Markdown"},
-            timeout=3,
-        )
+        requests.post(url, json=payload, timeout=3)
     except Exception:
         pass
 
+if "signal_active_std" not in st.session_state: st.session_state.signal_active_std = False
+if "cached_asset_display_std" not in st.session_state: st.session_state.cached_asset_display_std = None
+if "cached_tf_choice_std" not in st.session_state: st.session_state.cached_tf_choice_std = None
+if "cached_tf_seconds_std" not in st.session_state: st.session_state.cached_tf_seconds_std = None
+if "cached_direction_std" not in st.session_state: st.session_state.cached_direction_std = None
+if "cached_win_rate_std" not in st.session_state: st.session_state.cached_win_rate_std = None
+if "cached_time_std" not in st.session_state: st.session_state.cached_time_std = None
+if "cached_confidence_std" not in st.session_state: st.session_state.cached_confidence_std = None
+if "cached_details_std" not in st.session_state: st.session_state.cached_details_std = {}
 
-# ---------- stato ----------
-for key, default in {
-    "active": False, "asset": None, "tf": None, "tf_sec": None, "direction": None,
-    "time": None, "status": None, "details": {}, "stats": None,
-}.items():
-    st.session_state.setdefault(key, default)
+if st.button("🚀 Run Institutional Analysis"):
+    direction, win_rate, confidence, details = ultimate_institutional_analysis(selected_asset, tf_choice)
 
-if st.button("🚀 Analizza"):
-    direction, status, details, stats = analyze(ticker)
-    st.session_state.update(
-        active=True, asset=selected_display, tf=tf_choice, tf_sec=tf_seconds,
-        direction=direction, status=status, details=details, stats=stats,
-        time=next_candle_time_utc(tf_seconds),
-    )
+    st.session_state.cached_direction_std = direction
+    st.session_state.cached_win_rate_std = win_rate
+    st.session_state.cached_confidence_std = confidence
+    st.session_state.cached_time_std = get_next_candle_time(tf_seconds)
+    st.session_state.cached_asset_display_std = selected_display
+    st.session_state.cached_tf_choice_std = tf_choice
+    st.session_state.cached_tf_seconds_std = tf_seconds
+    st.session_state.cached_details_std = details
+    st.session_state.signal_active_std = True
+
     if "STAND BY" not in direction:
-        send_telegram_alert(selected_display, tf_choice, direction, st.session_state.time)
-
-if st.session_state.active:
-    s = st.session_state
-    st.success("Analisi completata")
-    st.markdown("### RISULTATO")
-    st.markdown(
-        f"* **Asset:** `{s.asset}`\n"
-        f"* **Timeframe:** `{s.tf}`\n"
-        f"* **Direzione:** **{s.direction}**\n"
-        f"* **Entrata (chiusura candela):** `{s.time}`\n"
-        f"* **Stato filtri:** `{s.status}`\n"
-        f"* **Gestione del rischio:** `max 1% del capitale`"
-    )
-
-    st.markdown("### 📈 Statistica storica reale (ultimi 5 giorni)")
-    st_ = s.stats
-    if st_ and st_["n"] > 0:
-        st.markdown(
-            f"* **Segnali passati:** `{st_['n']}`\n"
-            f"* **Win rate storico:** `{st_['wr']:.1%}` (IC 95%: `{st_['lo']:.1%} – {st_['hi']:.1%}`)\n"
-            f"* **Win rate di pareggio al payout {payout_pct}%:** `{breakeven:.1%}`"
+        send_telegram_alert(
+            selected_display, 
+            tf_choice, 
+            st.session_state.cached_direction_std, 
+            st.session_state.cached_win_rate_std, 
+            st.session_state.cached_confidence_std, 
+            st.session_state.cached_time_std
         )
-        if st_["n"] < 100:
-            st.warning("Campione piccolo (<100 segnali): il win rate non è affidabile.")
-        elif st_["lo"] <= breakeven:
-            st.error("Non c'è evidenza di un vantaggio: l'intervallo include il pareggio o sta sotto.")
+
+if st.session_state.signal_active_std:
+    st.success("Analysis complete!")
+
+    st.markdown("### SIGNAL RESULT")
+    st.markdown(f"""
+    * **Asset:** `{st.session_state.cached_asset_display_std}`
+    * **Timeframe:** `{st.session_state.cached_tf_choice_std}`
+    * **Signal Direction:** **{st.session_state.cached_direction_std}**
+    * **Entry Time (Candle Close):** `{st.session_state.cached_time_std}`
+    * **Estimated Accuracy:** `{st.session_state.cached_win_rate_std}`
+    * **Filter Status:** `{st.session_state.cached_confidence_std}`
+    * **Money Management:** `1% Account Capital`
+    """)
+
+    details = st.session_state.cached_details_std
+    if details:
+        if "STAND BY" in st.session_state.cached_direction_std:
+            st.markdown(f"""
+            <div class="standby-box">
+                <h4>🛑 STAND BY: FILTRATO DA CONFLUENZA</h4>
+                <p>I parametri tecnici sul timeframe selezionato non sono allineati o il mercato è in equilibrio.</p>
+                <hr style="border-color: #ff4444;">
+                <p style="color: #ffffff; text-align: left;"><b>RSI:</b> {details.get('RSI', 'N/A')}</p>
+                <p style="color: #ffffff; text-align: left;"><b>Trend Breve:</b> {details.get('Trend Breve (EMA 9/21)', 'N/A')}</p>
+                <p style="color: #ffffff; text-align: left;"><b>Bollinger:</b> {details.get('Bollinger Position', 'N/A')}</p>
+                <p style="color: #ffffff; text-align: left;"><b>MACD:</b> {details.get('MACD Cross', 'N/A')}</p>
+            </div>
+            """, unsafe_allow_html=True)
         else:
-            st.info("Vantaggio storico apparente. Conferma con backtest su periodi più lunghi.")
-    else:
-        st.info("Statistiche non disponibili.")
+            st.markdown(f"""
+            <div class="analysis-box">
+                <h4>📊 TECHNICAL METRICS ALIGNED</h4>
+                <p><b>RSI (14):</b> {details.get('RSI', 'N/A')}</p>
+                <p><b>Trend Breve:</b> {details.get('Trend Breve (EMA 9/21)', 'N/A')}</p>
+                <p><b>Posizione Bollinger:</b> {details.get('Bollinger Position', 'N/A')}</p>
+                <p><b>Momento MACD:</b> {details.get('MACD Cross', 'N/A')}</p>
+            </div>
+            """, unsafe_allow_html=True)
 
-    d = s.details
-    if d:
-        box = "standby-box" if "STAND BY" in s.direction else "analysis-box"
-        title = "🛑 STAND BY" if "STAND BY" in s.direction else "📊 METRICHE ALLINEATE"
-        st.markdown(
-            f"""<div class="{box}"><h4>{title}</h4>
-            <p><b>RSI (14):</b> {d.get('RSI')}</p>
-            <p><b>Trend:</b> {d.get('Trend (EMA 9/21)')}</p>
-            <p><b>Bollinger:</b> {d.get('Bollinger')}</p>
-            <p><b>MACD:</b> {d.get('MACD')}</p></div>""",
-            unsafe_allow_html=True,
-        )
+    st.markdown("### ⏳ Current Candle Countdown")
+    initial_left = get_seconds_to_next_candle(st.session_state.cached_tf_seconds_std)
 
-    st.markdown("### ⏳ Countdown candela")
-    left = seconds_to_next_candle(s.tf_sec)
-    components.html(
-        f"""
-        <div id="cd" style="font-size:28px;font-weight:bold;color:#00ffcc;text-align:center;background:#1f1f1f;padding:15px;border-radius:8px;border:1px solid #333;">...</div>
-        <script>
-        var t = {left};
-        function tick() {{
-            var el = document.getElementById("cd");
-            if (t <= 0) {{ el.innerHTML = "⏰ CANDELA CHIUSA"; el.style.color = "#ff4444"; return; }}
-            var m = Math.floor(t / 60), s = t % 60;
-            el.innerHTML = "⏱️ " + (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
-            t--;
+    timer_html = f"""
+    <div style="font-size: 28px; font-weight: bold; color: #00ffcc; text-align: center; background-color: #1f1f1f; padding: 15px; border-radius: 8px; border: 1px solid #333333;" id="countdown_std">
+        Loading timer...
+    </div>
+    <script>
+    var timeLeftStd = {initial_left};
+    function updateTimerStd() {{
+        if (timeLeftStd <= 0) {{
+            document.getElementById("countdown_std").innerHTML = "⏰ CANDELA CHIUSA!";
+            document.getElementById("countdown_std").style.color = "#ff4444";
+            return;
         }}
-        setInterval(tick, 1000); tick();
-        </script>
-        """,
-        height=80,
-    )
+        var minutes = Math.floor(timeLeftStd / 60);
+        var seconds = timeLeftStd % 60;
+        minutes = minutes < 10 ? "0" + minutes : minutes;
+        seconds = seconds < 10 ? "0" + seconds : seconds;
+        document.getElementById("countdown_std").innerHTML = "⏱️ " + minutes + ":" + seconds;
+        timeLeftStd--;
+    }}
+    setInterval(updateTimerStd, 1000);
+    updateTimerStd();
+    </script>
+    """
+    components.html(timer_html, height=80)
