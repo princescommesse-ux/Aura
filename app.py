@@ -6,7 +6,7 @@ import yfinance as yf
 
 # Page configuration
 st.set_page_config(
-    page_title="Aura Pro MTF Full", 
+    page_title="Aura Pro Sniper", 
     page_icon="⚡", 
     layout="centered"
 )
@@ -26,9 +26,9 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("⚡ AURA PRO ⚡")
+st.title("⚡ AURA PRO [SNIPER MODE] ⚡")
 
-# 20 coppie Forex
+# 19 coppie Forex pulite (senza AUD/NZD e NZD/JPY)
 assets_dict = {
     "🇪🇺🇺🇸 EUR/USD": {"symbol": "EURUSD=X"},
     "🇬🇧🇺🇸 GBP/USD": {"symbol": "GBPUSD=X"},
@@ -46,7 +46,6 @@ assets_dict = {
     "🇪🇺🇨🇦 EUR/CAD": {"symbol": "EURCAD=X"},
     "🇬🇧🇨🇦 GBP/CAD": {"symbol": "GBPCAD=X"},
     "🇦🇺🇨🇦 AUD/CAD": {"symbol": "AUDCAD=X"},
-    "🇦🇺🇳🇿 AUD/NZD": {"symbol": "AUDNZD=X"},
     "🇪🇺🇨🇭 EUR/CHF": {"symbol": "EURCHF=X"},
     "🇬🇧🇨🇭 GBP/CHF": {"symbol": "GBPCHF=X"},
     "🇨🇭🇯🇵 CHF/JPY": {"symbol": "CHFJPY=X"}
@@ -91,7 +90,7 @@ def get_next_candle_time(seconds):
     now = datetime.now()
     return (now + timedelta(seconds=get_seconds_to_next_candle(seconds))).strftime("%H:%M:%S")
 
-# --- MOTORE DI ANALISI CON FILTRO MULTI-TIMEFRAME (MTF) ---
+# --- MOTORE DI ANALISI SNIPER (FILTRI SEVERI) ---
 def ultimate_institutional_analysis(ticker, timeframe_choice):
     try:
         interval_map = {
@@ -106,14 +105,6 @@ def ultimate_institutional_analysis(ticker, timeframe_choice):
         df = yf.download(ticker, period="1d", interval=iv, progress=False)
         if df.empty or len(df) < 35:
             return "STAND BY", "N/A", "Insufficient Market Data", {}
-        
-        df_macro = yf.download(ticker, period="5d", interval="15m", progress=False)
-        macro_trend = "NEUTRAL"
-        if not df_macro.empty and len(df_macro) >= 25:
-            macro_close = df_macro['Close']
-            m_ema9 = macro_close.ewm(span=9, adjust=False).mean()
-            m_ema21 = macro_close.ewm(span=21, adjust=False).mean()
-            macro_trend = "BULLISH 🟢" if float(m_ema9.iloc[-1].item()) > float(m_ema21.iloc[-1].item()) else "BEARISH 🔴"
 
         close = df['Close']
         
@@ -149,20 +140,17 @@ def ultimate_institutional_analysis(ticker, timeframe_choice):
         details = {
             "RSI": f"{current_rsi:.1f}",
             "Trend Breve (EMA 9/21)": "BULLISH 🟢" if is_bullish_trend else "BEARISH 🔴",
-            "Macro Trend (15m)": macro_trend,
-            "Bollinger Position": "Near Lower Support" if curr_price <= curr_lower * 1.008 else ("Near Upper Resistance" if curr_price >= curr_upper * 0.992 else "Mid-Channel"),
+            "Bollinger Position": "At Lower Support" if curr_price <= curr_lower * 1.002 else ("At Upper Resistance" if curr_price >= curr_upper * 0.998 else "Mid-Channel"),
             "MACD Cross": "BULLISH 🟢" if is_macd_bullish else "BEARISH 🔴"
         }
 
-        is_macro_bull = "BULLISH" in macro_trend
-        is_macro_bear = "BEARISH" in macro_trend
-
-        if is_bullish_trend and current_rsi <= 55 and curr_price <= (curr_lower * 1.01) and is_macro_bull:
-            return "BUY 🟢", "89.0% - 92.0%", "MTF Confluence Confirmed", details
-        elif not is_bullish_trend and current_rsi >= 45 and curr_price >= (curr_upper * 0.99) and is_macro_bear:
-            return "SELL 🔴", "89.0% - 92.0%", "MTF Confluence Confirmed", details
+        # --- FILTRI SEVERI "SNIPER" ---
+        if is_bullish_trend and current_rsi <= 35 and curr_price <= (curr_lower * 1.005) and is_macd_bullish:
+            return "BUY 🟢", "93.0% - 95.0%", "Sniper Confluence Confirmed", details
+        elif not is_bullish_trend and current_rsi >= 65 and curr_price >= (curr_upper * 0.995) and not is_macd_bullish:
+            return "SELL 🔴", "93.0% - 95.0%", "Sniper Confluence Confirmed", details
         else:
-            return "STAND BY / NO TRADE", "N/A", "Market in Equilibrium or Macro Disagreement", details
+            return "STAND BY / NO TRADE", "N/A", "Strict Sniper Filter Active (Waiting for perfection)", details
             
     except Exception as e:
         return "STAND BY", "N/A", f"Error: {str(e)}", {}
@@ -173,7 +161,7 @@ def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence
     if bot_token == "INSERISCI_QUI_IL_TUO_BOT_TOKEN":
         return
     message = (
-        f"⚡ *AURA PRO MTF SIGNAL* ⚡\n\n"
+        f"⚡ *AURA PRO SNIPER SIGNAL* ⚡\n\n"
         f"🔹 *Asset:* `{display_name}`\n"
         f"⏰ *Timeframe:* `{timeframe}`\n"
         f"🎯 *Direction:* *{direction}*\n"
@@ -200,7 +188,7 @@ if "cached_time" not in st.session_state: st.session_state.cached_time = None
 if "cached_confidence" not in st.session_state: st.session_state.cached_confidence = None
 if "cached_details" not in st.session_state: st.session_state.cached_details = {}
 
-if st.button("🚀 Run MTF Institutional Analysis"):
+if st.button("🎯 Run Sniper Analysis"):
     direction, win_rate, confidence, details = ultimate_institutional_analysis(selected_asset, tf_choice)
     
     st.session_state.cached_direction = direction
@@ -242,12 +230,11 @@ if st.session_state.signal_active:
         if "STAND BY" in st.session_state.cached_direction:
             st.markdown(f"""
             <div class="standby-box">
-                <h4>🛑 STAND BY: FILTRATO DA MTF & CONFLUENZA</h4>
-                <p>Il trend a breve e il macro-trend su timeframe superiore non sono allineati o il mercato è in equilibrio.</p>
+                <h4>🛑 STAND BY: FILTRATO DA SNIPER MODE</h4>
+                <p>Il mercato non offre un'occasione perfetta. In attesa di estremi tecnici puliti.</p>
                 <hr style="border-color: #ff4444;">
                 <p style="color: #ffffff; text-align: left;"><b>RSI:</b> {details.get('RSI', 'N/A')}</p>
                 <p style="color: #ffffff; text-align: left;"><b>Trend Breve:</b> {details.get('Trend Breve (EMA 9/21)', 'N/A')}</p>
-                <p style="color: #ffffff; text-align: left;"><b>Macro Trend (15m):</b> {details.get('Macro Trend (15m)', 'N/A')}</p>
                 <p style="color: #ffffff; text-align: left;"><b>Bollinger:</b> {details.get('Bollinger Position', 'N/A')}</p>
                 <p style="color: #ffffff; text-align: left;"><b>MACD:</b> {details.get('MACD Cross', 'N/A')}</p>
             </div>
@@ -255,10 +242,9 @@ if st.session_state.signal_active:
         else:
             st.markdown(f"""
             <div class="analysis-box">
-                <h4>📊 MULTI-TIMEFRAME METRICS ALIGNED</h4>
+                <h4>🎯 SNIPER METRICS ALIGNED</h4>
                 <p><b>RSI (14):</b> {details.get('RSI', 'N/A')}</p>
                 <p><b>Trend Breve:</b> {details.get('Trend Breve (EMA 9/21)', 'N/A')}</p>
-                <p><b>Macro Trend (15m):</b> {details.get('Macro Trend (15m)', 'N/A')}</p>
                 <p><b>Posizione Bollinger:</b> {details.get('Bollinger Position', 'N/A')}</p>
                 <p><b>Momento MACD:</b> {details.get('MACD Cross', 'N/A')}</p>
             </div>
@@ -291,3 +277,4 @@ if st.session_state.signal_active:
     </script>
     """
     components.html(timer_html, height=80)
+
