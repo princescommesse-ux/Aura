@@ -6,7 +6,7 @@ import yfinance as yf
 
 # Page configuration
 st.set_page_config(
-    page_title="Aura Pro Ultimate MTF", 
+    page_title="Aura Pro MTF Full 21", 
     page_icon="⚡", 
     layout="centered"
 )
@@ -26,9 +26,9 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("⚡ AURA PRO (MTF INSTITUTIONAL ENGINE) ⚡")
+st.title("⚡ AURA PRO (MTF 21 FOREX PAIRS) ⚡")
 
-# Top 10 Elite Currency Pairs
+# Tutte le 21 coppie Forex disponibili su Pocket Option
 assets_dict = {
     "🇪🇺🇺🇸 EUR/USD": {"symbol": "EURUSD=X"},
     "🇬🇧🇺🇸 GBP/USD": {"symbol": "GBPUSD=X"},
@@ -36,10 +36,21 @@ assets_dict = {
     "🇦🇺🇺🇸 AUD/USD": {"symbol": "AUDUSD=X"},
     "🇺🇸🇨🇦 USD/CAD": {"symbol": "USDCAD=X"},
     "🇺🇸🇨🇭 USD/CHF": {"symbol": "USDCHF=X"},
+    "🇳🇿🇺🇸 NZD/USD": {"symbol": "NZDUSD=X"},
     "🇬🇧🇯🇵 GBP/JPY": {"symbol": "GBPJPY=X"},
     "🇪🇺🇯🇵 EUR/JPY": {"symbol": "EURJPY=X"},
     "🇪🇺🇬🇧 EUR/GBP": {"symbol": "EURGBP=X"},
-    "🇦🇺🇯🇵 AUD/JPY": {"symbol": "AUDJPY=X"}
+    "🇦🇺🇯🇵 AUD/JPY": {"symbol": "AUDJPY=X"},
+    "🇪🇺🇦🇺 EUR/AUD": {"symbol": "EURAUD=X"},
+    "🇬🇧🇦🇺 GBP/AUD": {"symbol": "GBPAUD=X"},
+    "🇪🇺🇨🇦 EUR/CAD": {"symbol": "EURCAD=X"},
+    "🇬🇧🇨🇦 GBP/CAD": {"symbol": "GBPCAD=X"},
+    "🇦🇺🇨🇦 AUD/CAD": {"symbol": "AUDCAD=X"},
+    "🇳🇿🇯🇵 NZD/JPY": {"symbol": "NZDJPY=X"},
+    "🇦🇺🇳🇿 AUD/NZD": {"symbol": "AUDNZD=X"},
+    "🇪🇺🇨🇭 EUR/CHF": {"symbol": "EURCHF=X"},
+    "🇬🇧🇨🇭 GBP/CHF": {"symbol": "GBPCHF=X"},
+    "🇨🇭🇯🇵 CHF/JPY": {"symbol": "CHFJPY=X"}
 }
 
 selected_display = st.selectbox("Select Currency Pair", list(assets_dict.keys()))
@@ -150,11 +161,8 @@ def ultimate_institutional_analysis(ticker, timeframe_choice):
         is_macro_bull = "BULLISH" in macro_trend
         is_macro_bear = "BEARISH" in macro_trend
 
-        # Condizione BUY: Richiede trend breve, RSI controllato, Bollinger e conferma del Macro Trend rialzista
         if is_bullish_trend and current_rsi <= 55 and curr_price <= (curr_lower * 1.01) and is_macro_bull:
             return "BUY 🟢", "89.0% - 92.0%", "MTF Confirmed Institutional Confluence (Support)", details
-        
-        # Condizione SELL: Richiede trend ribassista, RSI controllato, Bollinger e conferma del Macro Trend ribassista
         elif not is_bullish_trend and current_rsi >= 45 and curr_price >= (curr_upper * 0.99) and is_macro_bear:
             return "SELL 🔴", "89.0% - 92.0%", "MTF Confirmed Institutional Confluence (Resistance)", details
         else:
@@ -230,7 +238,7 @@ if st.session_state.signal_active:
     * **Entry Time (Candle Close):** `{st.session_state.cached_time}`
     * **Estimated Accuracy:** `{st.session_state.cached_win_rate}`
     * **Filter Status:** `{st.session_state.cached_confidence}`
-    * **Money Management:** `1% Account Capital`
+    * **Money Management:** `1% Fixed Capital`
     """)
     
     details = st.session_state.cached_details
