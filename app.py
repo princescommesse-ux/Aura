@@ -168,4 +168,4 @@ if __name__ == "__main__":
             except KeyboardInterrupt:
                 print("\n[STOP] Monitoraggio interrotto.")
     else:
-        print("[ERRORE] Scelta non valida.") 
+        print("[ERRORE] Scelta non valida.")
