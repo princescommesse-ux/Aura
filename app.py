@@ -11,37 +11,18 @@ import websockets
 SSID = "INSERISCI_QUI_IL_TUO_SSID_DEL_BROWSER"
 WEBSOCKET_URL = "wss://api.pocketoption.com/socket.io/?EIO=4&transport=websocket"
 
-# LISTA COMPLETA DEGLI ASSET DISPONIBILI NEL BOT
+# LISTA ASSET
 ASSET_LIST = {
-    # --- FOREX REALE (Yahoo Finance) ---
-    "1": {"name": "EUR/USD (Reale)", "symbol": "EURUSD=X", "type": "forex"},
-    "2": {"name": "GBP/USD (Reale)", "symbol": "GBPUSD=X", "type": "forex"},
-    "3": {"name": "USD/JPY (Reale)", "symbol": "USDJPY=X", "type": "forex"},
-    
-    # --- FOREX OTC ---
-    "4": {"name": "EUR/USD OTC", "symbol": "EURUSD_otc", "type": "otc"},
-    "5": {"name": "GBP/USD OTC", "symbol": "GBPUSD_otc", "type": "otc"},
-    "6": {"name": "USD/JPY OTC", "symbol": "USDJPY_otc", "type": "otc"},
-    "7": {"name": "AUD/USD OTC", "symbol": "AUDUSD_otc", "type": "otc"},
-    
-    # --- CRIPTO & ASSET OTC (Dal tuo screenshot) ---
-    "8": {"name": "Bitcoin (BTC) OTC", "symbol": "Bitcoin_otc", "type": "otc"},
-    "9": {"name": "Ethereum (ETH) OTC", "symbol": "Ethereum_otc", "type": "otc"},
-    "10": {"name": "Dash OTC", "symbol": "Dash_otc", "type": "otc"},
-    "11": {"name": "Chainlink OTC", "symbol": "Chainlink_otc", "type": "otc"},
-    "12": {"name": "BCH/EUR OTC", "symbol": "BCHEUR_otc", "type": "otc"},
-    "13": {"name": "BCH/GBP OTC", "symbol": "BCHGBP_otc", "type": "otc"},
-    "14": {"name": "BCH/JPY OTC", "symbol": "BCHJPY_otc", "type": "otc"},
-    "15": {"name": "BTC/GBP OTC", "symbol": "BTCGBP_otc", "type": "otc"},
-    "16": {"name": "BTC/JPY OTC", "symbol": "BTCJPY_otc", "type": "otc"},
+    "1": {"name": "EUR/USD (Reale - yfinance)", "symbol": "EURUSD=X", "type": "forex"},
+    "2": {"name": "EUR/USD OTC", "symbol": "EURUSD_otc", "type": "otc"},
+    "3": {"name": "GBP/USD OTC", "symbol": "GBPUSD_otc", "type": "otc"},
+    "4": {"name": "Bitcoin (BTC) OTC", "symbol": "Bitcoin_otc", "type": "otc"},
+    "5": {"name": "Ethereum (ETH) OTC", "symbol": "Ethereum_otc", "type": "otc"},
 }
 
-# ==========================================
-# MOTORE DI INDICATORI COMUNE
-# ==========================================
 def calculate_indicators(df):
     if len(df) < 30:
-        return None, "Dati insufficienti per il calcolo"
+        return None, f"Dati insufficienti ({len(df)} candele, ne servono almeno 30)"
     
     df['EMA_9'] = df['close'].ewm(span=9, adjust=False).mean()
     df['EMA_21'] = df['close'].ewm(span=21, adjust=False).mean()
@@ -78,7 +59,7 @@ def calculate_indicators(df):
             reason = "RSI ipercomprato, prezzo sopra la Bollinger superiore, EMA ribassista e MACD favorevole."
             
     return {
-        "time": str(last.get('time', 'Live')),
+        "time": str(df.index[-1] if hasattr(df.index, '__getitem__') else "Live"),
         "close": round(float(last['close']), 5),
         "rsi": round(float(last['RSI']), 2),
         "macd": round(float(last['MACD']), 5),
@@ -86,83 +67,96 @@ def calculate_indicators(df):
         "reason": reason
     }, None
 
-# ==========================================
-# ANALISI FOREX REALE (yfinance)
-# ==========================================
 def run_forex_analysis(symbol, name):
-    print(f"\n[FOREX REALE] Avvio analisi in corso per {name} ({symbol})...")
-    df = yf.download(symbol, period="5d", interval="1m", progress=False)
-    if df.empty:
-        print("[ERRORE] Nessun dato ricevuto da yfinance.")
-        return
-    
-    if isinstance(df.columns, pd.MultiIndex):
-        df.columns = df.columns.get_level_values(0)
-        
-    analysis, err = calculate_indicators(df)
-    if analysis:
-        print(f"[{analysis['time']}] Prezzo: {analysis['close']} | RSI: {analysis['rsi']}")
-        print(f"-> Segnale: {analysis['signal']}\n   Motivo: {analysis['reason']}\n" + "-"*50)
+    print(f"\n[FOREX] Scaricamento dati reali per {name}...")
+    try:
+        df = yf.download(symbol, period="5d", interval="1m", progress=False)
+        if df.empty:
+            print("[ERRORE] yfinance ha restituito un DataFrame vuoto.")
+            return
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.get_level_values(0)
+            
+        analysis, err = calculate_indicators(df)
+        if analysis:
+            print(f"\n[{analysis['time']}] Prezzo: {analysis['close']} | RSI: {analysis['rsi']}")
+            print(f"-> Segnale: {analysis['signal']}")
+            print(f"   Motivo: {analysis['reason']}\n" + "-"*50)
+        else:
+            print(f"[ATTENZIONE] {err}")
+    except Exception as e:
+        print(f"[ERRORE FOREX] {e}")
 
-# ==========================================
-# ANALISI OTC (WebSocket)
-# ==========================================
 async def run_otc_analysis(asset_target, name):
     candles_df = pd.DataFrame(columns=['time', 'open', 'high', 'low', 'close', 'volume'])
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Origin": "https://pocketoption.com"
     }
     
-    print(f"\n[OTC WEBSOCKET] Connessione al flusso per: {name} ({asset_target})...")
+    print(f"\n[OTC] Tentativo di connessione WebSocket per {name} ({asset_target})...")
+    
     try:
-        async with websockets.connect(WEBSOCKET_URL, extra_headers=headers) as ws:
+        # Aggiungiamo un timeout di connessione di 10 secondi per evitare blocchi infiniti
+        async with websockets.connect(WEBSOCKET_URL, extra_headers=headers, ping_interval=20) as ws:
+            print("[DEBUG] Connessione WebSocket stabilita. Invio handshake...")
             await ws.send('40')
-            await ws.send(f'42["auth", {{"session": "{SSID}", "isDemo": 1}}]')
-            await ws.send(f'42["changeSymbol", "{asset_target}"]')
-            print(f"[SUCCESSO] Connesso a {name}! In ascolto dei dati in tempo reale...\n")
+            
+            print(f"[DEBUG] Invio autenticazione con SSID...")
+            auth_msg = f'42["auth", {{"session": "{SSID}", "isDemo": 1}}]'
+            await ws.send(auth_msg)
+            
+            print(f"[DEBUG] Sottoscrizione all'asset {asset_target}...")
+            sub_msg = f'42["changeSymbol", "{asset_target}"]'
+            await ws.send(sub_msg)
+            
+            print(f"[SUCCESSO] In ascolto dei flussi live. Premi Ctrl+C per uscire.\n")
             
             while True:
-                response = await ws.recv()
-                if response == "2":
-                    await ws.send("3")
-                    continue
-                
-                if response.startswith("42"):
-                    data = json.loads(response[2:])
-                    event_type = data[0]
-                    payload = data[1]
+                try:
+                    # Timeout di 15 secondi sul singolo pacchetto per evitare il freeze totale
+                    response = await asyncio.wait_for(ws.recv(), timeout=15.0)
                     
-                    if event_type in ["updateStream", "candleHistory"]:
-                        if isinstance(payload, list):
-                            candles_df = pd.DataFrame(payload)
-                        elif isinstance(payload, dict) and 'close' in payload:
-                            new_row = pd.DataFrame([payload])
-                            candles_df = pd.concat([candles_df, new_row], ignore_index=True)
-                            
-                        analysis, err = calculate_indicators(candles_df)
-                        if analysis:
-                            print(f"[{name} Live] Prezzo: {analysis['close']} | RSI: {analysis['rsi']}")
-                            print(f"-> Segnale: {analysis['signal']}\n   Motivo: {analysis['reason']}\n" + "-"*50)
-                            
-    except websockets.exceptions.ConnectionClosedError:
-        print("[ERRORE] Connessione WebSocket chiusa dal server. Verifica che l'SSID sia corretto.")
+                    if response == "2":
+                        await ws.send("3")
+                        continue
+                    
+                    if response.startswith("42"):
+                        data = json.loads(response[2:])
+                        event_type = data[0]
+                        payload = data[1]
+                        
+                        if event_type in ["updateStream", "candleHistory"]:
+                            if isinstance(payload, list):
+                                candles_df = pd.DataFrame(payload)
+                            elif isinstance(payload, dict) and 'close' in payload:
+                                new_row = pd.DataFrame([payload])
+                                candles_df = pd.concat([candles_df, new_row], ignore_index=True)
+                                
+                            analysis, err = calculate_indicators(candles_df)
+                            if analysis:
+                                print(f"[{name} Live] Prezzo: {analysis['close']} | RSI: {analysis['rsi']}")
+                                print(f"-> Segnale: {analysis['signal']} | Motivo: {analysis['reason']}\n" + "-"*50)
+                
+                except asyncio.TimeoutError:
+                    print("[AVVISO] Nessun pacchetto ricevuto dal server negli ultimi 15 secondi (connessione inattiva o SSID non valido).")
+                    break
+                    
+    except websockets.exceptions.InvalidStatusCode as e:
+        print(f"[ERRORE WEBSOCKET] Status code non valido: {e.status_code}. Il server ha rifiutato la connessione.")
     except Exception as e:
-        print(f"[ERRORE WEBSOCKET] {e}")
+        print(f"[ERRORE WEBSOCKET CRITICO] {e}")
 
-# ==========================================
-# MENU PRINCIPALE
-# ==========================================
 if __name__ == "__main__":
     print("==========================================")
-    print("   BOT UNIFICATO: FOREX & OTC ANALYZER")
+    print("   BOT UNIFICATO: FOREX & OTC (DEBUG)")
     print("==========================================")
     print("Seleziona l'asset da monitorare:\n")
     
     for key, data in ASSET_LIST.items():
         print(f" [{key}] {data['name']}")
         
-    scelta = input("\nInserisci il numero corrispondente all'asset: ").strip()
+    scelta = input("\nInserisci il numero dell'asset: ").strip()
     
     if scelta in ASSET_LIST:
         selected = ASSET_LIST[scelta]
@@ -172,7 +166,6 @@ if __name__ == "__main__":
             try:
                 asyncio.run(run_otc_analysis(selected["symbol"], selected["name"]))
             except KeyboardInterrupt:
-                print("\n[STOP] Monitoraggio interrotto manualmente.")
+                print("\n[STOP] Monitoraggio interrotto.")
     else:
-        print("[ERRORE] Selezione non valida. Riavvia lo script.")
-
+        print("[ERRORE] Scelta non valida.")
