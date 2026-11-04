@@ -6,11 +6,10 @@ import yfinance as yf
 # Configurazione della pagina Streamlit
 st.set_page_config(page_title="Bot Analisi Forex & OTC", layout="centered")
 
-st.title("🤖 Bot di Analisi Tecnica Completo")
-st.write("Seleziona una delle 20 coppie Forex reali o uno dei 60 asset OTC di valute.")
+st.title("🤖 Bot di Analisi Tecnica (Reattivo)")
+st.write("Filtri ottimizzati per generare segnali rapidi e operativi.")
 
-# --- LISTE COMPLETE DEI 20 FOREX E 60 OTC VALUTE ---
-
+# --- LISTE COMPLETE ---
 FOREX_LIST = [
     "EUR/USD (EURUSD=X)", "GBP/USD (GBPUSD=X)", "USD/JPY (USDJPY=X)", "AUD/USD (AUDUSD=X)",
     "USD/CAD (USDCAD=X)", "NZD/USD (NZDUSD=X)", "USD/CHF (USDCHF=X)", "EUR/GBP (EURGBP=X)",
@@ -47,16 +46,12 @@ if mercato_tipo == "Forex Reale (20 coppie)":
 else:
     asset_scelta = st.selectbox("Scegli l'asset OTC di valuta:", OTC_VALUTE_LIST)
     display_name = asset_scelta
-    
-    # Mappatura intelligente dei 60 OTC sul Forex reale corrispondente di Yahoo Finance
-    # Se la coppia contiene la stessa valuta base/quota, usa il ticker reale per calcolare gli indicatori
     base_clean = asset_scelta.replace(" OTC", "").replace("/", "")
     symbol_to_fetch = f"{base_clean}=X"
-    # Fallback di sicurezza se Yahoo non ha il ticker esatto
     if base_clean not in ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "NZDUSD", "USDCHF", "EURGBP", "EURJPY", "GBPJPY"]:
         symbol_to_fetch = "EURUSD=X"
 
-# Funzione di calcolo indicatori
+# Funzione di calcolo indicatori (Filtri più snelli e reattivi)
 def calculate_indicators(df):
     if isinstance(df.columns, pd.MultiIndex):
         df.columns = df.columns.get_level_values(0)
@@ -89,24 +84,23 @@ def calculate_indicators(df):
     df['MACD_Signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
     
     last = df.iloc[-1]
+    rsi_val = last['RSI']
     
+    # Logica molto più flessibile e reattiva
     signal = "STAND BY"
-    reason = "Mercato in equilibrio o filtri non allineati"
+    reason = f"RSI neutrale ({round(rsi_val, 2)}). In attesa di direttive."
     
-    if last['RSI'] < 38 and last['close'] <= last['BB_Lower'] and last['EMA_9'] > last['EMA_21']:
-        if last['MACD'] > last['MACD_Signal']:
-            signal = "BUY 🟢"
-            reason = "RSI ipervenduto, prezzo sotto la Bollinger inferiore, EMA rialzista e MACD favorevole."
-            
-    elif last['RSI'] > 62 and last['close'] >= last['BB_Upper'] and last['EMA_9'] < last['EMA_21']:
-        if last['MACD'] < last['MACD_Signal']:
-            signal = "SELL 🔴"
-            reason = "RSI ipercomprato, prezzo sopra la Bollinger superiore, EMA ribassista e MACD favorevole."
+    if rsi_val < 45 or last['close'] <= last['BB_Lower']:
+        signal = "BUY 🟢"
+        reason = f"RSI in zona di vantaggio ribassista/ipervenduto ({round(rsi_val, 2)}) o prezzo sulla banda inferiore."
+    elif rsi_val > 55 or last['close'] >= last['BB_Upper']:
+        signal = "SELL 🔴"
+        reason = f"RSI in zona di vantaggio rialzista/ipercomprato ({round(rsi_val, 2)}) o prezzo sulla banda superiore."
             
     return {
         "time": str(df.index[-1] if hasattr(df.index, '__getitem__') else "Live"),
         "close": round(float(last['close']), 5),
-        "rsi": round(float(last['RSI']), 2),
+        "rsi": round(float(rsi_val), 2),
         "macd": round(float(last['MACD']), 5),
         "signal": signal,
         "reason": reason
@@ -130,5 +124,6 @@ if st.button("🚀 Avvia Analisi di Mercato", type="primary"):
                 st.info(f"**Motivo:** {analysis['reason']}")
             else:
                 st.warning(err)
+
 
 
