@@ -6,7 +6,7 @@ import yfinance as yf
 
 # Page configuration
 st.set_page_config(
-    page_title="Aura Pro Sniper", 
+    page_title="Aura Pro", 
     page_icon="⚡", 
     layout="centered"
 )
@@ -26,7 +26,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("⚡ AURA PRO [SNIPER MODE] ⚡")
+st.title("⚡ AURA PRO ⚡")
 
 # Selezione della Tipologia di Mercato
 mercato_tipo = st.radio("Seleziona Mercato:", ["Forex Reale (20 coppie)", "Asset OTC Valute", "Crypto OTC", "Azioni OTC"], horizontal=True)
@@ -116,49 +116,48 @@ otc_dict = {
     "🇴🇲🇨🇳 OMR/CNY OTC": {"symbol": "EURUSD=X"}
 }
 
-# Lista Criptovalute OTC
+# Lista ufficiale delle Criptovalute OTC da Pocket Option
 crypto_otc_dict = {
-    "₿🇺🇸 BTC/USD OTC": {"symbol": "BTC-USD"},
-    "Ξ🇺🇸 ETH/USD OTC": {"symbol": "ETH-USD"},
-    "LTC/USD OTC": {"symbol": "LTC-USD"},
-    "XRP/USD OTC": {"symbol": "XRP-USD"},
-    "BCH/USD OTC": {"symbol": "BCH-USD"},
-    "ADA/USD OTC": {"symbol": "ADA-USD"},
-    "DOGE/USD OTC": {"symbol": "DOGE-USD"},
-    "DOT/USD OTC": {"symbol": "DOT-USD"},
-    "LINK/USD OTC": {"symbol": "LINK-USD"},
-    "SOL/USD OTC": {"symbol": "SOL-USD"},
-    "MATIC/USD OTC": {"symbol": "MATIC-USD"},
-    "AVAX/USD OTC": {"symbol": "AVAX-USD"},
-    "TRX/USD OTC": {"symbol": "TRX-USD"},
-    "SHIB/USD OTC": {"symbol": "SHIB-USD"}
+    "₿ Bitcoin OTC (+92%)": {"symbol": "BTC-USD"},
+    "🔴 Polkadot OTC (+92%)": {"symbol": "DOT-USD"},
+    "Ł Litecoin OTC (+92%)": {"symbol": "LTC-USD"},
+    "💎 Toncoin OTC (+92%)": {"symbol": "TON-USD"},
+    "💜 Polygon OTC (+86%)": {"symbol": "MATIC-USD"},
+    "🔺 Avalanche OTC (+75%)": {"symbol": "AVAX-USD"},
+    "Ξ Ethereum OTC (+69%)": {"symbol": "ETH-USD"},
+    "🔗 Chainlink OTC (+62%)": {"symbol": "LINK-USD"},
+    "₳ Cardano OTC (+59%)": {"symbol": "ADA-USD"},
+    "📈 Bitcoin ETF OTC (+59%)": {"symbol": "IBIT"},
+    "🟡 BNB OTC (+54%)": {"symbol": "BNB-USD"},
+    "☀️ Solana OTC (+54%)": {"symbol": "SOL-USD"},
+    "🔴 TRON OTC (+46%)": {"symbol": "TRX-USD"}
 }
 
-# Lista ufficiale ESATTA delle Azioni OTC di Pocket Option (mappate per l'analisi tecnica)
+# Lista ufficiale delle Azioni OTC da Pocket Option
 stocks_otc_dict = {
-    "💳 American Express OTC": {"symbol": "AXP"},
-    "💊 Johnson & Johnson OTC": {"symbol": "JNJ"},
-    "💻 Microsoft OTC": {"symbol": "MSFT"},
-    "🧪 Pfizer Inc OTC": {"symbol": "PFE"},
-    "🪙 Coinbase Global OTC": {"symbol": "COIN"},
-    "📦 FedEx OTC": {"symbol": "FDX"},
-    "📊 VIX OTC": {"symbol": "^VIX"},
-    "🍎 Apple OTC": {"symbol": "AAPL"},
-    "🔌 Cisco OTC": {"symbol": "CSCO"},
-    "🚗 Tesla OTC": {"symbol": "TSLA"},
-    "🛢️ ExxonMobil OTC": {"symbol": "XOM"},
-    "⛏️ Marathon Digital Holdings OTC": {"symbol": "MARA"},
-    "💳 VISA OTC": {"symbol": "V"},
-    "🏦 Citigroup Inc OTC": {"symbol": "C"},
-    "🍿 Netflix OTC": {"symbol": "NFLX"},
-    "💻 Intel OTC": {"symbol": "INTC"},
-    "🍟 McDonald's OTC": {"symbol": "MCD"},
-    "👁️ Palantir Technologies OTC": {"symbol": "PLTR"},
-    "✈️ Boeing Company OTC": {"symbol": "BA"},
-    "📦 Amazon OTC": {"symbol": "AMZN"},
-    "📱 Advanced Micro Devices OTC": {"symbol": "AMD"},
-    "👥 FACEBOOK INC OTC": {"symbol": "META"},
-    "🛒 Alibaba OTC": {"symbol": "BABA"},
+    "💳 American Express OTC (+92%)": {"symbol": "AXP"},
+    "💊 Johnson & Johnson OTC (+92%)": {"symbol": "JNJ"},
+    "💻 Microsoft OTC (+92%)": {"symbol": "MSFT"},
+    "🧪 Pfizer Inc OTC (+92%)": {"symbol": "PFE"},
+    "🪙 Coinbase Global OTC (+92%)": {"symbol": "COIN"},
+    "📦 FedEx OTC (+92%)": {"symbol": "FDX"},
+    "📊 VIX OTC (+92%)": {"symbol": "^VIX"},
+    "🍎 Apple OTC (+91%)": {"symbol": "AAPL"},
+    "🔌 Cisco OTC (+90%)": {"symbol": "CSCO"},
+    "🚗 Tesla OTC (+85%)": {"symbol": "TSLA"},
+    "🛢️ ExxonMobil OTC (+85%)": {"symbol": "XOM"},
+    "⛏️ Marathon Digital Holdings OTC (+79%)": {"symbol": "MARA"},
+    "💳 VISA OTC (+75%)": {"symbol": "V"},
+    "🏦 Citigroup Inc OTC (+74%)": {"symbol": "C"},
+    "🍿 Netflix OTC (+65%)": {"symbol": "NFLX"},
+    "💻 Intel OTC (+59%)": {"symbol": "INTC"},
+    "🍟 McDonald's OTC (+54%)": {"symbol": "MCD"},
+    "👁️ Palantir Technologies OTC (+48%)": {"symbol": "PLTR"},
+    "✈️ Boeing Company OTC (+47%)": {"symbol": "BA"},
+    "📦 Amazon OTC (+40%)": {"symbol": "AMZN"},
+    "📱 Advanced Micro Devices OTC (+39%)": {"symbol": "AMD"},
+    "👥 FACEBOOK INC OTC (+35%)": {"symbol": "META"},
+    "🛒 Alibaba OTC (+34%)": {"symbol": "BABA"},
     "🎮 GameStop Corp OTC": {"symbol": "GME"}
 }
 
@@ -259,13 +258,33 @@ def ultimate_institutional_analysis(ticker, timeframe_choice):
             "MACD Cross": "BULLISH 🟢" if is_macd_bullish else "BEARISH 🔴"
         }
 
-        # Filtri bilanciati
+        # Logica di Segnale
         if current_rsi <= 38 and (is_bullish_trend or curr_price <= curr_lower):
-            return "BUY 🟢", "90.0% - 93.0%", "Balanced Confluence Confirmed", details
+            direction = "BUY 🟢"
         elif current_rsi >= 62 and (not is_bullish_trend or curr_price >= curr_upper):
-            return "SELL 🔴", "90.0% - 93.0%", "Balanced Confluence Confirmed", details
+            direction = "SELL 🔴"
         else:
             return "STAND BY / NO TRADE", "N/A", "Market in Equilibrium", details
+
+        # Calcolo Dinamico dell'Intelligenza/Confidenza del Bot (Reale e basato sui dati)
+        score = 52.0
+        if "BUY" in direction:
+            if current_rsi <= 30: score += 12.0
+            elif current_rsi <= 38: score += 7.0
+            if curr_price <= curr_lower * 1.002: score += 12.0
+            if is_bullish_trend: score += 10.0
+            if is_macd_bullish: score += 8.0
+        elif "SELL" in direction:
+            if current_rsi >= 70: score += 12.0
+            elif current_rsi >= 62: score += 7.0
+            if curr_price >= curr_upper * 0.998: score += 12.0
+            if not is_bullish_trend: score += 10.0
+            if not is_macd_bullish: score += 8.0
+
+        final_score = min(score, 82.5)
+        confidence_str = f"{final_score:.1f}% (Dynamic AI Confidence)"
+
+        return direction, confidence_str, "Balanced Confluence Confirmed", details
             
     except Exception as e:
         return "STAND BY", "N/A", f"Error: {str(e)}", {}
@@ -276,12 +295,12 @@ def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence
     if bot_token == "INSERISCI_QUI_IL_TUO_BOT_TOKEN":
         return
     message = (
-        f"⚡ *AURA PRO SNIPER SIGNAL* ⚡\n\n"
+        f"⚡ *AURA PRO SIGNAL* ⚡\n\n"
         f"🔹 *Asset:* `{display_name}`\n"
         f"⏰ *Timeframe:* `{timeframe}`\n"
         f"🎯 *Direction:* *{direction}*\n"
         f"🕒 *Entry Time:* `{entry_time}`\n"
-        f"📈 *Expected Accuracy:* `{win_rate}`\n"
+        f"📈 *Dynamic Confidence:* `{win_rate}`\n"
         f"🛡️ *Status:* `{confidence}`\n"
         f"💰 *Risk Management:* `1% Fixed Capital`"
     )
@@ -302,7 +321,7 @@ if "cached_time_snp" not in st.session_state: st.session_state.cached_time_snp =
 if "cached_confidence_snp" not in st.session_state: st.session_state.cached_confidence_snp = None
 if "cached_details_snp" not in st.session_state: st.session_state.cached_details_snp = {}
 
-if st.button("🎯 Run Sniper Analysis"):
+if st.button("🎯 Run Analysis"):
     direction, win_rate, confidence, details = ultimate_institutional_analysis(selected_asset, tf_choice)
     
     st.session_state.cached_direction_snp = direction
@@ -334,7 +353,7 @@ if st.session_state.signal_active_snp:
     * **Timeframe:** `{st.session_state.cached_tf_choice_snp}`
     * **Signal Direction:** **{st.session_state.cached_direction_snp}**
     * **Entry Time (Candle Close):** `{st.session_state.cached_time_snp}`
-    * **Estimated Accuracy:** `{st.session_state.cached_win_rate_snp}`
+    * **Dynamic AI Confidence:** `{st.session_state.cached_win_rate_snp}`
     * **Filter Status:** `{st.session_state.cached_confidence_snp}`
     * **Money Management:** `1% Account Capital`
     """)
@@ -391,4 +410,5 @@ if st.session_state.signal_active_snp:
     </script>
     """
     components.html(timer_html, height=80)
+
 
