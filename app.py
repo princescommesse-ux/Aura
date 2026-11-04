@@ -28,8 +28,8 @@ st.markdown(
 
 st.title("⚡ AURA PRO [SNIPER MODE] ⚡")
 
-# Selezione della Tipologia di Mercato (Forex Reale vs Asset OTC Valute)
-mercato_tipo = st.radio("Seleziona Mercato:", ["Forex Reale (20 coppie)", "Asset OTC Valute (60+)"], horizontal=True)
+# Selezione della Tipologia di Mercato
+mercato_tipo = st.radio("Seleziona Mercato:", ["Forex Reale (20 coppie)", "Asset OTC Valute", "Crypto OTC", "Azioni OTC"], horizontal=True)
 
 # 20 coppie Forex Reali
 forex_dict = {
@@ -55,76 +55,125 @@ forex_dict = {
     "🇸🇪🇺🇸 USD/SEK": {"symbol": "USDSEK=X"}
 }
 
-# 60 Asset OTC di sole valute (mappati intelligentemente sui ticker reali di Yahoo Finance)
+# Lista ufficiale delle coppie OTC Valute da Pocket Option
 otc_dict = {
+    "🇦🇺🇨🇭 AUD/CHF OTC": {"symbol": "AUDCHF=X"},
+    "🇦🇺🇳🇿 AUD/NZD OTC": {"symbol": "AUDUSD=X"},
+    "🇦🇺🇺🇸 AUD/USD OTC": {"symbol": "AUDUSD=X"},
+    "🇧🇭🇨🇳 BHD/CNY OTC": {"symbol": "EURUSD=X"},
+    "🇨🇦🇯🇵 CAD/JPY OTC": {"symbol": "USDJPY=X"},
+    "🇪🇺🇨🇭 EUR/CHF OTC": {"symbol": "EURCHF=X"},
+    "🇪🇺🇬🇧 EUR/GBP OTC": {"symbol": "EURGBP=X"},
+    "🇪🇺🇭🇺 EUR/HUF OTC": {"symbol": "EURUSD=X"},
     "🇪🇺🇺🇸 EUR/USD OTC": {"symbol": "EURUSD=X"},
     "🇬🇧🇺🇸 GBP/USD OTC": {"symbol": "GBPUSD=X"},
-    "🇺🇸🇯🇵 USD/JPY OTC": {"symbol": "USDJPY=X"},
-    "🇦🇺🇺🇸 AUD/USD OTC": {"symbol": "AUDUSD=X"},
-    "🇺🇸🇨🇦 USD/CAD OTC": {"symbol": "USDCAD=X"},
-    "🇳🇿🇺🇸 NZD/USD OTC": {"symbol": "NZDUSD=X"},
+    "🇯🇴🇨🇳 JOD/CNY OTC": {"symbol": "EURUSD=X"},
+    "🇳🇬🇺🇸 NGN/USD OTC": {"symbol": "EURUSD=X"},
+    "🇺🇸🇧🇷 USD/BRL OTC": {"symbol": "USDCAD=X"},
     "🇺🇸🇨🇭 USD/CHF OTC": {"symbol": "USDCHF=X"},
-    "🇪🇺🇬🇧 EUR/GBP OTC": {"symbol": "EURGBP=X"},
+    "🇺🇸🇨🇱 USD/CLP OTC": {"symbol": "USDCAD=X"},
+    "🇺🇸🇨🇴 USD/COP OTC": {"symbol": "USDCAD=X"},
+    "🇺🇸🇩🇿 USD/DZD OTC": {"symbol": "USDCAD=X"},
+    "🇺🇸🇮🇩 USD/IDR OTC": {"symbol": "USDJPY=X"},
+    "🇺🇸🇮🇳 USD/INR OTC": {"symbol": "USDJPY=X"},
+    "🇺🇸🇵🇰 USD/PKR OTC": {"symbol": "USDJPY=X"},
+    "🇺🇸🇹🇭 USD/THB OTC": {"symbol": "USDJPY=X"},
     "🇪🇺🇯🇵 EUR/JPY OTC": {"symbol": "EURJPY=X"},
-    "🇬🇧🇯🇵 GBP/JPY OTC": {"symbol": "GBPJPY=X"},
+    "🇪🇺🇳🇿 EUR/NZD OTC": {"symbol": "EURUSD=X"},
+    "🇰🇪🇺🇸 KES/USD OTC": {"symbol": "EURUSD=X"},
+    "🇺🇦🇺🇸 UAH/USD OTC": {"symbol": "EURUSD=X"},
+    "🇺🇸🇨🇦 USD/CAD OTC": {"symbol": "USDCAD=X"},
     "🇦🇺🇯🇵 AUD/JPY OTC": {"symbol": "AUDJPY=X"},
-    "🇪🇺🇦🇺 EUR/AUD OTC": {"symbol": "EURAUD=X"},
+    "🇱🇧🇺🇸 LBP/USD OTC": {"symbol": "EURUSD=X"},
+    "🇿🇦🇺🇸 ZAR/USD OTC": {"symbol": "USDUSD=X"},
+    "🇺🇸🇦🇷 USD/ARS OTC": {"symbol": "USDCAD=X"},
+    "🇨🇭🇯🇵 CHF/JPY OTC": {"symbol": "CHFJPY=X"},
+    "🇨🇭🇳🇴 CHF/NOK OTC": {"symbol": "USDCHF=X"},
+    "🇺🇸🇸🇬 USD/SGD OTC": {"symbol": "USDCAD=X"},
+    "🇦🇪🇨🇳 AED/CNY OTC": {"symbol": "EURUSD=X"},
+    "🇺🇸🇷🇺 USD/RUB OTC": {"symbol": "USDCAD=X"},
+    "🇺🇸🇧🇩 USD/BDT OTC": {"symbol": "USDCAD=X"},
+    "🇬🇧🇯🇵 GBP/JPY OTC": {"symbol": "GBPJPY=X"},
+    "🇺🇸🇨🇳 USD/CNH OTC": {"symbol": "USDCAD=X"},
+    "🇺🇸🇲🇾 USD/MYR OTC": {"symbol": "USDCAD=X"},
+    "🇺🇸🇪🇬 USD/EGP OTC": {"symbol": "USDCAD=X"},
     "🇬🇧🇦🇺 GBP/AUD OTC": {"symbol": "GBPAUD=X"},
-    "🇪🇺🇨🇦 EUR/CAD OTC": {"symbol": "EURCAD=X"},
-    "🇬🇧🇨🇦 GBP/CAD OTC": {"symbol": "GBPCAD=X"},
+    "🇺🇸🇯🇵 USD/JPY OTC": {"symbol": "USDJPY=X"},
+    "🇪🇺🇹🇷 EUR/TRY OTC": {"symbol": "EURUSD=X"},
+    "🇶🇦🇨🇳 QAR/CNY OTC": {"symbol": "EURUSD=X"},
+    "🇺🇸🇵🇭 USD/PHP OTC": {"symbol": "USDCAD=X"},
+    "🇲🇦🇺🇸 MAD/USD OTC": {"symbol": "EURUSD=X"},
+    "🇸🇦🇨🇳 SAR/CNY OTC": {"symbol": "EURUSD=X"},
+    "🇹🇳🇺🇸 TND/USD OTC": {"symbol": "EURUSD=X"},
+    "🇺🇸🇻🇳 USD/VND OTC": {"symbol": "USDCAD=X"},
+    "🇳🇿🇯🇵 NZD/JPY OTC": {"symbol": "USDJPY=X"},
+    "🇨🇦🇨🇭 CAD/CHF OTC": {"symbol": "USDCHF=X"},
     "🇦🇺🇨🇦 AUD/CAD OTC": {"symbol": "AUDCAD=X"},
-    "🇳🇿🇯🇵 NZD/JPY OTC": {"symbol": "NZDJPY=X"},
-    "🇪🇺🇳🇿 EUR/NZD OTC": {"symbol": "EURNZD=X"},
-    "🇬🇧🇳🇿 GBP/NZD OTC": {"symbol": "GBPNZD=X"},
-    "🇸🇪🇺🇸 USD/SEK OTC": {"symbol": "USDSEK=X"},
-    "🇸🇪🇪🇺 EUR/SEK OTC": {"symbol": "EURUSD=X"},
-    "🇳🇴🇺🇸 USD/NOK OTC": {"symbol": "USDUSD=X"},
-    "🇳🇴🇪🇺 EUR/NOK OTC": {"symbol": "EURUSD=X"},
-    "🇩🇰🇺🇸 USD/DKK OTC": {"symbol": "USDUSD=X"},
-    "🇵🇱🇺🇸 USD/PLN OTC": {"symbol": "USDUSD=X"},
-    "🇵🇱🇪🇺 EUR/PLN OTC": {"symbol": "EURUSD=X"},
-    "🇿🇦🇺🇸 USD/ZAR OTC": {"symbol": "USDUSD=X"},
-    "🇿🇦🇪🇺 EUR/ZAR OTC": {"symbol": "EURUSD=X"},
-    "🇹🇷🇺🇸 USD/TRY OTC": {"symbol": "USDUSD=X"},
-    "🇹🇷🇪🇺 EUR/TRY OTC": {"symbol": "EURUSD=X"},
-    "🇲🇽🇺🇸 USD/MXN OTC": {"symbol": "USDUSD=X"},
-    "🇧🇷🇺🇸 USD/BRL OTC": {"symbol": "USDUSD=X"},
-    "🇦🇷🇺🇸 USD/ARS OTC": {"symbol": "USDUSD=X"},
-    "🇨🇱🇺🇸 USD/CLP OTC": {"symbol": "USDUSD=X"},
-    "🇨🇴🇺🇸 USD/COP OTC": {"symbol": "USDUSD=X"},
-    "🇮🇳🇺🇸 USD/INR OTC": {"symbol": "USDUSD=X"},
-    "🇮🇩🇺🇸 USD/IDR OTC": {"symbol": "USDUSD=X"},
-    "🇵🇭🇺🇸 USD/PHP OTC": {"symbol": "USDUSD=X"},
-    "🇸🇬🇺🇸 USD/SGD OTC": {"symbol": "USDUSD=X"},
-    "🇹🇭🇺🇸 USD/THB OTC": {"symbol": "USDUSD=X"},
-    "🇲🇾🇺🇸 USD/MYR OTC": {"symbol": "USDUSD=X"},
-    "🇻🇳🇺🇸 USD/VND OTC": {"symbol": "USDUSD=X"},
-    "🇰🇷🇺🇸 USD/KRW OTC": {"symbol": "USDUSD=X"},
-    "🇹🇼🇺🇸 USD/TWD OTC": {"symbol": "USDUSD=X"},
-    "🇭🇰🇺🇸 USD/HKD OTC": {"symbol": "USDUSD=X"},
-    "🇳🇿🇦🇺 AUD/NZD OTC": {"symbol": "AUDUSD=X"},
-    "🇨🇭🇦🇺 AUD/CHF OTC": {"symbol": "USDCHF=X"},
-    "🇯🇵🇨🇦 CAD/JPY OTC": {"symbol": "USDJPY=X"},
-    "🇯🇵🇨🇭 CHF/JPY OTC": {"symbol": "CHFJPY=X"},
-    "🇨🇦🇳🇿 NZD/CAD OTC": {"symbol": "NZDUSD=X"},
-    "🇨🇭🇳🇿 NZD/CHF OTC": {"symbol": "NZDUSD=X"},
-    "🇨🇭🇬🇧 GBP/CHF OTC": {"symbol": "GBPUSD=X"},
-    "🇨🇭🇪🇺 EUR/CHF OTC": {"symbol": "EURUSD=X"},
-    "🇨🇭🇨🇦 CAD/CHF OTC": {"symbol": "USDCAD=X"},
-    "🇯🇵🇸🇬 SGD/JPY OTC": {"symbol": "USDJPY=X"},
-    "🇯🇵🇿🇦 ZAR/JPY OTC": {"symbol": "USDJPY=X"},
-    "🇸🇪🇳🇴 NOK/SEK OTC": {"symbol": "USDSEK=X"},
-    "🇯🇵🇵🇱 PLN/JPY OTC": {"symbol": "USDJPY=X"},
-    "🇯🇵🇭🇺 HUF/JPY OTC": {"symbol": "USDJPY=X"},
-    "🇯🇵🇨🇿 CZK/JPY OTC": {"symbol": "USDJPY=X"}
+    "🇺🇸🇲🇽 USD/MXN OTC": {"symbol": "USDCAD=X"},
+    "🇾🇪🇺🇸 YER/USD OTC": {"symbol": "EURUSD=X"},
+    "🇪🇺🇷🇺 EUR/RUB OTC": {"symbol": "EURUSD=X"},
+    "🇳🇿🇺🇸 NZD/USD OTC": {"symbol": "NZDUSD=X"},
+    "🇴🇲🇨🇳 OMR/CNY OTC": {"symbol": "EURUSD=X"}
+}
+
+# Lista Criptovalute OTC
+crypto_otc_dict = {
+    "₿🇺🇸 BTC/USD OTC": {"symbol": "BTC-USD"},
+    "Ξ🇺🇸 ETH/USD OTC": {"symbol": "ETH-USD"},
+    "LTC/USD OTC": {"symbol": "LTC-USD"},
+    "XRP/USD OTC": {"symbol": "XRP-USD"},
+    "BCH/USD OTC": {"symbol": "BCH-USD"},
+    "ADA/USD OTC": {"symbol": "ADA-USD"},
+    "DOGE/USD OTC": {"symbol": "DOGE-USD"},
+    "DOT/USD OTC": {"symbol": "DOT-USD"},
+    "LINK/USD OTC": {"symbol": "LINK-USD"},
+    "SOL/USD OTC": {"symbol": "SOL-USD"},
+    "MATIC/USD OTC": {"symbol": "MATIC-USD"},
+    "AVAX/USD OTC": {"symbol": "AVAX-USD"},
+    "TRX/USD OTC": {"symbol": "TRX-USD"},
+    "SHIB/USD OTC": {"symbol": "SHIB-USD"}
+}
+
+# Lista ufficiale ESATTA delle Azioni OTC di Pocket Option (mappate per l'analisi tecnica)
+stocks_otc_dict = {
+    "💳 American Express OTC": {"symbol": "AXP"},
+    "💊 Johnson & Johnson OTC": {"symbol": "JNJ"},
+    "💻 Microsoft OTC": {"symbol": "MSFT"},
+    "🧪 Pfizer Inc OTC": {"symbol": "PFE"},
+    "🪙 Coinbase Global OTC": {"symbol": "COIN"},
+    "📦 FedEx OTC": {"symbol": "FDX"},
+    "📊 VIX OTC": {"symbol": "^VIX"},
+    "🍎 Apple OTC": {"symbol": "AAPL"},
+    "🔌 Cisco OTC": {"symbol": "CSCO"},
+    "🚗 Tesla OTC": {"symbol": "TSLA"},
+    "🛢️ ExxonMobil OTC": {"symbol": "XOM"},
+    "⛏️ Marathon Digital Holdings OTC": {"symbol": "MARA"},
+    "💳 VISA OTC": {"symbol": "V"},
+    "🏦 Citigroup Inc OTC": {"symbol": "C"},
+    "🍿 Netflix OTC": {"symbol": "NFLX"},
+    "💻 Intel OTC": {"symbol": "INTC"},
+    "🍟 McDonald's OTC": {"symbol": "MCD"},
+    "👁️ Palantir Technologies OTC": {"symbol": "PLTR"},
+    "✈️ Boeing Company OTC": {"symbol": "BA"},
+    "📦 Amazon OTC": {"symbol": "AMZN"},
+    "📱 Advanced Micro Devices OTC": {"symbol": "AMD"},
+    "👥 FACEBOOK INC OTC": {"symbol": "META"},
+    "🛒 Alibaba OTC": {"symbol": "BABA"},
+    "🎮 GameStop Corp OTC": {"symbol": "GME"}
 }
 
 if mercato_tipo == "Forex Reale (20 coppie)":
     selected_display = st.selectbox("Select Currency Pair", list(forex_dict.keys()), key="snp_asset_forex")
     selected_asset = forex_dict[selected_display]["symbol"]
-else:
+elif mercato_tipo == "Asset OTC Valute":
     selected_display = st.selectbox("Select OTC Asset", list(otc_dict.keys()), key="snp_asset_otc")
     selected_asset = otc_dict[selected_display]["symbol"]
+elif mercato_tipo == "Crypto OTC":
+    selected_display = st.selectbox("Select Crypto OTC Asset", list(crypto_otc_dict.keys()), key="snp_asset_crypto")
+    selected_asset = crypto_otc_dict[selected_display]["symbol"]
+else:
+    selected_display = st.selectbox("Select Stock OTC Asset", list(stocks_otc_dict.keys()), key="snp_asset_stocks")
+    selected_asset = stocks_otc_dict[selected_display]["symbol"]
 
 def get_market_sessions():
     utc_hour = datetime.utcnow().hour
@@ -210,7 +259,7 @@ def ultimate_institutional_analysis(ticker, timeframe_choice):
             "MACD Cross": "BULLISH 🟢" if is_macd_bullish else "BEARISH 🔴"
         }
 
-        # Filtri bilanciati (evitano il blocco fisso in STAND BY e l'eccesso di soli BUY)
+        # Filtri bilanciati
         if current_rsi <= 38 and (is_bullish_trend or curr_price <= curr_lower):
             return "BUY 🟢", "90.0% - 93.0%", "Balanced Confluence Confirmed", details
         elif current_rsi >= 62 and (not is_bullish_trend or curr_price >= curr_upper):
@@ -342,3 +391,4 @@ if st.session_state.signal_active_snp:
     </script>
     """
     components.html(timer_html, height=80)
+
