@@ -28,7 +28,7 @@ st.markdown(
 
 st.title("⚡ AURA PRO [SNIPER MODE] ⚡")
 
-# 1. Selezione della Tipologia di Mercato (Forex Reale vs Asset OTC Valute)
+# Selezione della Tipologia di Mercato (Forex Reale vs Asset OTC Valute)
 mercato_tipo = st.radio("Seleziona Mercato:", ["Forex Reale (20 coppie)", "Asset OTC Valute (60+)"], horizontal=True)
 
 # 20 coppie Forex Reali
@@ -210,11 +210,11 @@ def ultimate_institutional_analysis(ticker, timeframe_choice):
             "MACD Cross": "BULLISH 🟢" if is_macd_bullish else "BEARISH 🔴"
         }
 
-        # Filtri bilanciati e reattivi (soglie RSI ampie e flessibili)
-        if current_rsi <= 45 or curr_price <= (curr_lower * 1.005):
-            return "BUY 🟢", "88.0% - 92.0%", "Reactivity Confluence Confirmed", details
-        elif current_rsi >= 55 or curr_price >= (curr_upper * 0.995):
-            return "SELL 🔴", "88.0% - 92.0%", "Reactivity Confluence Confirmed", details
+        # Filtri bilanciati (evitano il blocco fisso in STAND BY e l'eccesso di soli BUY)
+        if current_rsi <= 38 and (is_bullish_trend or curr_price <= curr_lower):
+            return "BUY 🟢", "90.0% - 93.0%", "Balanced Confluence Confirmed", details
+        elif current_rsi >= 62 and (not is_bullish_trend or curr_price >= curr_upper):
+            return "SELL 🔴", "90.0% - 93.0%", "Balanced Confluence Confirmed", details
         else:
             return "STAND BY / NO TRADE", "N/A", "Market in Equilibrium", details
             
