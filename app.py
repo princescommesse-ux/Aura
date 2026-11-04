@@ -146,4 +146,4 @@ if __name__ == "__main__":
         asset_input = input("Inserisci l'asset OTC (default EURUSD_otc): ").strip() or "EURUSD_otc"
         asyncio.run(analyze_otc(asset_input))
     else:
-        print("Scelta non valida.")
+        print("Scelta non valida.") 
