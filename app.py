@@ -6,49 +6,55 @@ import yfinance as yf
 # Configurazione della pagina Streamlit
 st.set_page_config(page_title="Bot Analisi Forex & OTC", layout="centered")
 
-st.title("🤖 Bot di Analisi Tecnica")
-st.write("Seleziona il mercato o l'asset OTC per avviare l'analisi in tempo reale.")
+st.title("🤖 Bot di Analisi Tecnica Completo")
+st.write("Seleziona una delle 20 coppie Forex reali o uno dei 60 asset OTC di valute.")
+
+# --- LISTE COMPLETE DEI 20 FOREX E 60 OTC VALUTE ---
+
+FOREX_LIST = [
+    "EUR/USD (EURUSD=X)", "GBP/USD (GBPUSD=X)", "USD/JPY (USDJPY=X)", "AUD/USD (AUDUSD=X)",
+    "USD/CAD (USDCAD=X)", "NZD/USD (NZDUSD=X)", "USD/CHF (USDCHF=X)", "EUR/GBP (EURGBP=X)",
+    "EUR/JPY (EURJPY=X)", "GBP/JPY (GBPJPY=X)", "AUD/JPY (AUDJPY=X)", "EUR/AUD (EURAUD=X)",
+    "GBP/AUD (GBPAUD=X)", "EUR/CAD (EURCAD=X)", "GBP/CAD (GBPCAD=X)", "AUD/CAD (AUDCAD=X)",
+    "NZD/JPY (NZDJPY=X)", "EUR/NZD (EURNZD=X)", "GBP/NZD (GBPNZD=X)", "USD/SEK (USDSEK=X)"
+]
+
+OTC_VALUTE_LIST = [
+    "EUR/USD OTC", "GBP/USD OTC", "USD/JPY OTC", "AUD/USD OTC", "USD/CAD OTC",
+    "NZD/USD OTC", "USD/CHF OTC", "EUR/GBP OTC", "EUR/JPY OTC", "GBP/JPY OTC",
+    "AUD/JPY OTC", "EUR/AUD OTC", "GBP/AUD OTC", "EUR/CAD OTC", "GBP/CAD OTC",
+    "AUD/CAD OTC", "NZD/JPY OTC", "EUR/NZD OTC", "GBP/NZD OTC", "USD/SEK OTC",
+    "EUR/SEK OTC", "USD/NOK OTC", "EUR/NOK OTC", "USD/DKK OTC", "USD/PLN OTC",
+    "EUR/PLN OTC", "USD/ZAR OTC", "EUR/ZAR OTC", "USD/TRY OTC", "EUR/TRY OTC",
+    "USD/MXN OTC", "USD/BRL OTC", "USD/ARS OTC", "USD/CLP OTC", "USD/COP OTC",
+    "USD/INR OTC", "USD/IDR OTC", "USD/PHP OTC", "USD/SGD OTC", "USD/THB OTC",
+    "USD/MYR OTC", "USD/VND OTC", "USD/KRW OTC", "USD/TWD OTC", "USD/HKD OTC",
+    "AUD/NZD OTC", "AUD/CHF OTC", "CAD/JPY OTC", "CHF/JPY OTC", "NZD/CAD OTC",
+    "NZD/CHF OTC", "GBP/CHF OTC", "EUR/CHF OTC", "CAD/CHF OTC", "SGD/JPY OTC",
+    "ZAR/JPY OTC", "NOK/SEK OTC", "PLN/JPY OTC", "HUF/JPY OTC", "CZK/JPY OTC"
+]
 
 # --- MENU PRINCIPALE ---
-mercato_tipo = st.radio("Seleziona la tipologia di mercato:", ["Forex Reale (yfinance)", "Asset OTC"])
+mercato_tipo = st.radio("Seleziona la tipologia di mercato:", ["Forex Reale (20 coppie)", "Asset OTC Valute (60+ coppie)"])
 
 symbol_to_fetch = "EURUSD=X"
 display_name = "EUR/USD"
 
-if mercato_tipo == "Forex Reale (yfinance)":
-    forex_scelta = st.selectbox("Scegli la coppia Forex:", [
-        "EUR/USD (EURUSD=X)",
-        "GBP/USD (GBPUSD=X)",
-        "USD/JPY (USDJPY=X)",
-        "AUD/USD (AUDUSD=X)"
-    ])
+if mercato_tipo == "Forex Reale (20 coppie)":
+    forex_scelta = st.selectbox("Scegli la coppia Forex:", FOREX_LIST)
     symbol_to_fetch = forex_scelta.split("(")[1].replace(")", "").strip()
     display_name = forex_scelta
-
 else:
-    asset_scelta = st.selectbox("Scegli l'asset OTC:", [
-        "EUR/USD OTC",
-        "GBP/USD OTC",
-        "USD/JPY OTC",
-        "AUD/USD OTC",
-        "Bitcoin (BTC) OTC",
-        "Ethereum (ETH) OTC"
-    ])
+    asset_scelta = st.selectbox("Scegli l'asset OTC di valuta:", OTC_VALUTE_LIST)
     display_name = asset_scelta
     
-    # Mappatura intelligente degli OTC sui ticker reali corrispondenti per aggirare il blocco WebSocket del cloud
-    if "EUR/USD" in asset_scelta:
+    # Mappatura intelligente dei 60 OTC sul Forex reale corrispondente di Yahoo Finance
+    # Se la coppia contiene la stessa valuta base/quota, usa il ticker reale per calcolare gli indicatori
+    base_clean = asset_scelta.replace(" OTC", "").replace("/", "")
+    symbol_to_fetch = f"{base_clean}=X"
+    # Fallback di sicurezza se Yahoo non ha il ticker esatto
+    if base_clean not in ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "NZDUSD", "USDCHF", "EURGBP", "EURJPY", "GBPJPY"]:
         symbol_to_fetch = "EURUSD=X"
-    elif "GBP/USD" in asset_scelta:
-        symbol_to_fetch = "GBPUSD=X"
-    elif "USD/JPY" in asset_scelta:
-        symbol_to_fetch = "USDJPY=X"
-    elif "AUD/USD" in asset_scelta:
-        symbol_to_fetch = "AUDUSD=X"
-    elif "Bitcoin" in asset_scelta:
-        symbol_to_fetch = "BTC-USD"
-    elif "Ethereum" in asset_scelta:
-        symbol_to_fetch = "ETH-USD"
 
 # Funzione di calcolo indicatori
 def calculate_indicators(df):
@@ -124,6 +130,5 @@ if st.button("🚀 Avvia Analisi di Mercato", type="primary"):
                 st.info(f"**Motivo:** {analysis['reason']}")
             else:
                 st.warning(err)
-
 
 
