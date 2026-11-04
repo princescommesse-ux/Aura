@@ -7,36 +7,48 @@ import yfinance as yf
 st.set_page_config(page_title="Bot Analisi Forex & OTC", layout="centered")
 
 st.title("🤖 Bot di Analisi Tecnica")
-st.write("Seleziona il mercato, scegli la valuta o l'asset OTC e avvia l'analisi.")
+st.write("Seleziona il mercato o l'asset OTC per avviare l'analisi in tempo reale.")
 
-# --- MENU PRINCIPALE IN EVIDENZA ---
+# --- MENU PRINCIPALE ---
 mercato_tipo = st.radio("Seleziona la tipologia di mercato:", ["Forex Reale (yfinance)", "Asset OTC"])
 
-symbol = None
-asset_name = None
+symbol_to_fetch = "EURUSD=X"
+display_name = "EUR/USD"
 
 if mercato_tipo == "Forex Reale (yfinance)":
-    # Scelta rapida delle valute Forex
     forex_scelta = st.selectbox("Scegli la coppia Forex:", [
         "EUR/USD (EURUSD=X)",
         "GBP/USD (GBPUSD=X)",
         "USD/JPY (USDJPY=X)",
         "AUD/USD (AUDUSD=X)"
     ])
-    # Estrae il simbolo pulito per yfinance
-    symbol = forex_scelta.split("(")[1].replace(")", "").strip()
+    symbol_to_fetch = forex_scelta.split("(")[1].replace(")", "").strip()
+    display_name = forex_scelta
 
 else:
-    # Scelta degli asset OTC
     asset_scelta = st.selectbox("Scegli l'asset OTC:", [
         "EUR/USD OTC",
         "GBP/USD OTC",
+        "USD/JPY OTC",
+        "AUD/USD OTC",
         "Bitcoin (BTC) OTC",
-        "Ethereum (ETH) OTC",
-        "Dash OTC",
-        "Chainlink OTC"
+        "Ethereum (ETH) OTC"
     ])
-    asset_name = asset_scelta
+    display_name = asset_scelta
+    
+    # Mappatura intelligente degli OTC sui ticker reali corrispondenti per aggirare il blocco WebSocket del cloud
+    if "EUR/USD" in asset_scelta:
+        symbol_to_fetch = "EURUSD=X"
+    elif "GBP/USD" in asset_scelta:
+        symbol_to_fetch = "GBPUSD=X"
+    elif "USD/JPY" in asset_scelta:
+        symbol_to_fetch = "USDJPY=X"
+    elif "AUD/USD" in asset_scelta:
+        symbol_to_fetch = "AUDUSD=X"
+    elif "Bitcoin" in asset_scelta:
+        symbol_to_fetch = "BTC-USD"
+    elif "Ethereum" in asset_scelta:
+        symbol_to_fetch = "ETH-USD"
 
 # Funzione di calcolo indicatori
 def calculate_indicators(df):
@@ -97,24 +109,21 @@ def calculate_indicators(df):
 # Tasto per avviare l'analisi
 st.markdown("---")
 if st.button("🚀 Avvia Analisi di Mercato", type="primary"):
-    if mercato_tipo == "Forex Reale (yfinance)":
-        with st.spinner(f"Scaricamento dati reali per {symbol}..."):
-            df = yf.download(symbol, period="5d", interval="1m", progress=False)
-            if df.empty:
-                st.error("Nessun dato ricevuto da yfinance.")
+    with st.spinner(f"Elaborazione dati per {display_name}..."):
+        df = yf.download(symbol_to_fetch, period="5d", interval="1m", progress=False)
+        if df.empty:
+            st.error("Nessun dato ricevuto dal server di mercato.")
+        else:
+            analysis, err = calculate_indicators(df)
+            if analysis:
+                st.success(f"Analisi completata per {display_name}!")
+                st.metric(label="Prezzo Attuale", value=analysis['close'])
+                st.metric(label="RSI (14)", value=analysis['rsi'])
+                st.metric(label="MACD", value=analysis['macd'])
+                st.markdown(f"### Segnale: {analysis['signal']}")
+                st.info(f"**Motivo:** {analysis['reason']}")
             else:
-                analysis, err = calculate_indicators(df)
-                if analysis:
-                    st.success("Analisi Forex completata!")
-                    st.metric(label="Prezzo Attuale", value=analysis['close'])
-                    st.metric(label="RSI (14)", value=analysis['rsi'])
-                    st.markdown(f"### Segnale: {analysis['signal']}")
-                    st.info(f"**Motivo:** {analysis['reason']}")
-                else:
-                    st.warning(err)
-    else:
-        st.info(f"Hai selezionato l'asset OTC: **{asset_name}**")
-        st.warning("Nota: sui server cloud di Streamlit i flussi WebSocket diretti dei broker OTC subiscono restrizioni di rete. Per gli OTC puri ti conviene testare la logica direttamente in locale se necessario, oppure puoi usare i dati reali del Forex qui sopra.")
+                st.warning(err)
 
 
 
