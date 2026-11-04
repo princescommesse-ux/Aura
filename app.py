@@ -159,6 +159,3 @@ if auto_refresh:
         placeholder.markdown(f"⏳ **Prossimo aggiornamento automatico tra:** `{seconds} secondi`")
         time.sleep(1)
     st.rerun()
-
-
-
