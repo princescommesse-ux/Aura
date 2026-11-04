@@ -11,31 +11,52 @@ import websockets
 SSID = "INSERISCI_QUI_IL_TUO_SSID_DEL_BROWSER"
 WEBSOCKET_URL = "wss://api.pocketoption.com/socket.io/?EIO=4&transport=websocket"
 
+# LISTA COMPLETA DEGLI ASSET DISPONIBILI NEL BOT
+ASSET_LIST = {
+    # --- FOREX REALE (Yahoo Finance) ---
+    "1": {"name": "EUR/USD (Reale)", "symbol": "EURUSD=X", "type": "forex"},
+    "2": {"name": "GBP/USD (Reale)", "symbol": "GBPUSD=X", "type": "forex"},
+    "3": {"name": "USD/JPY (Reale)", "symbol": "USDJPY=X", "type": "forex"},
+    
+    # --- FOREX OTC ---
+    "4": {"name": "EUR/USD OTC", "symbol": "EURUSD_otc", "type": "otc"},
+    "5": {"name": "GBP/USD OTC", "symbol": "GBPUSD_otc", "type": "otc"},
+    "6": {"name": "USD/JPY OTC", "symbol": "USDJPY_otc", "type": "otc"},
+    "7": {"name": "AUD/USD OTC", "symbol": "AUDUSD_otc", "type": "otc"},
+    
+    # --- CRIPTO & ASSET OTC (Dal tuo screenshot) ---
+    "8": {"name": "Bitcoin (BTC) OTC", "symbol": "Bitcoin_otc", "type": "otc"},
+    "9": {"name": "Ethereum (ETH) OTC", "symbol": "Ethereum_otc", "type": "otc"},
+    "10": {"name": "Dash OTC", "symbol": "Dash_otc", "type": "otc"},
+    "11": {"name": "Chainlink OTC", "symbol": "Chainlink_otc", "type": "otc"},
+    "12": {"name": "BCH/EUR OTC", "symbol": "BCHEUR_otc", "type": "otc"},
+    "13": {"name": "BCH/GBP OTC", "symbol": "BCHGBP_otc", "type": "otc"},
+    "14": {"name": "BCH/JPY OTC", "symbol": "BCHJPY_otc", "type": "otc"},
+    "15": {"name": "BTC/GBP OTC", "symbol": "BTCGBP_otc", "type": "otc"},
+    "16": {"name": "BTC/JPY OTC", "symbol": "BTCJPY_otc", "type": "otc"},
+}
+
 # ==========================================
-# MOTORE DI INDICATORI COMUNE (Stessa logica)
+# MOTORE DI INDICATORI COMUNE
 # ==========================================
 def calculate_indicators(df):
     if len(df) < 30:
         return None, "Dati insufficienti per il calcolo"
     
-    # 1. EMA 9 e 21
     df['EMA_9'] = df['close'].ewm(span=9, adjust=False).mean()
     df['EMA_21'] = df['close'].ewm(span=21, adjust=False).mean()
     
-    # 2. RSI 14
     delta = df['close'].diff()
     gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
     loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
     rs = gain / loss
     df['RSI'] = 100 - (100 / (1 + rs))
     
-    # 3. Bande di Bollinger (20, 2)
     df['BB_Middle'] = df['close'].rolling(window=20).mean()
     std = df['close'].rolling(window=20).std()
     df['BB_Upper'] = df['BB_Middle'] + (std * 2)
     df['BB_Lower'] = df['BB_Middle'] - (std * 2)
     
-    # 4. MACD (12, 26, 9)
     exp1 = df['close'].ewm(span=12, adjust=False).mean()
     exp2 = df['close'].ewm(span=26, adjust=False).mean()
     df['MACD'] = exp1 - exp2
@@ -43,7 +64,6 @@ def calculate_indicators(df):
     
     last = df.iloc[-1]
     
-    # Logica di Segnale Bilanciata
     signal = "STAND BY"
     reason = "Mercato in equilibrio o filtri non allineati"
     
@@ -67,11 +87,11 @@ def calculate_indicators(df):
     }, None
 
 # ==========================================
-# MODULO 1: ANALISI FOREX REALE (yfinance)
+# ANALISI FOREX REALE (yfinance)
 # ==========================================
-def run_forex_analysis(symbol="EURUSD=X", interval="1m"):
-    print(f"\n[FOREX] Avvio analisi in corso per {symbol}...")
-    df = yf.download(symbol, period="5d", interval=interval, progress=False)
+def run_forex_analysis(symbol, name):
+    print(f"\n[FOREX REALE] Avvio analisi in corso per {name} ({symbol})...")
+    df = yf.download(symbol, period="5d", interval="1m", progress=False)
     if df.empty:
         print("[ERRORE] Nessun dato ricevuto da yfinance.")
         return
@@ -85,22 +105,22 @@ def run_forex_analysis(symbol="EURUSD=X", interval="1m"):
         print(f"-> Segnale: {analysis['signal']}\n   Motivo: {analysis['reason']}\n" + "-"*50)
 
 # ==========================================
-# MODULO 2: ANALISI OTC (WebSocket)
+# ANALISI OTC (WebSocket)
 # ==========================================
-async def run_otc_analysis(asset_target="EURUSD_otc"):
+async def run_otc_analysis(asset_target, name):
     candles_df = pd.DataFrame(columns=['time', 'open', 'high', 'low', 'close', 'volume'])
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         "Origin": "https://pocketoption.com"
     }
     
-    print(f"\n[OTC] Connessione al flusso WebSocket per l'asset: {asset_target}...")
+    print(f"\n[OTC WEBSOCKET] Connessione al flusso per: {name} ({asset_target})...")
     try:
         async with websockets.connect(WEBSOCKET_URL, extra_headers=headers) as ws:
             await ws.send('40')
             await ws.send(f'42["auth", {{"session": "{SSID}", "isDemo": 1}}]')
             await ws.send(f'42["changeSymbol", "{asset_target}"]')
-            print(f"[SUCCESSO] Connesso a {asset_target}! In ascolto dei dati in tempo reale...\n")
+            print(f"[SUCCESSO] Connesso a {name}! In ascolto dei dati in tempo reale...\n")
             
             while True:
                 response = await ws.recv()
@@ -122,7 +142,7 @@ async def run_otc_analysis(asset_target="EURUSD_otc"):
                             
                         analysis, err = calculate_indicators(candles_df)
                         if analysis:
-                            print(f"[OTC Live] Prezzo: {analysis['close']} | RSI: {analysis['rsi']}")
+                            print(f"[{name} Live] Prezzo: {analysis['close']} | RSI: {analysis['rsi']}")
                             print(f"-> Segnale: {analysis['signal']}\n   Motivo: {analysis['reason']}\n" + "-"*50)
                             
     except websockets.exceptions.ConnectionClosedError:
@@ -131,25 +151,28 @@ async def run_otc_analysis(asset_target="EURUSD_otc"):
         print(f"[ERRORE WEBSOCKET] {e}")
 
 # ==========================================
-# MENU PRINCIPALE DEL BOT UNIFICATO
+# MENU PRINCIPALE
 # ==========================================
 if __name__ == "__main__":
     print("==========================================")
     print("   BOT UNIFICATO: FOREX & OTC ANALYZER")
     print("==========================================")
-    print("1. Analizza Forex Reale (es. EURUSD=X)")
-    print("2. Avvia Monitoraggio WebSocket OTC in tempo reale")
+    print("Seleziona l'asset da monitorare:\n")
     
-    scelta = input("\nSeleziona la modalità (1 o 2): ").strip()
+    for key, data in ASSET_LIST.items():
+        print(f" [{key}] {data['name']}")
+        
+    scelta = input("\nInserisci il numero corrispondente all'asset: ").strip()
     
-    if scelta == "1":
-        simbolo = input("Inserisci il simbolo Forex (default EURUSD=X): ").strip() or "EURUSD=X"
-        run_forex_analysis(simbolo)
-    elif scelta == "2":
-        asset = input("Inserisci l'asset OTC (default EURUSD_otc): ").strip() or "EURUSD_otc"
-        try:
-            asyncio.run(run_otc_analysis(asset))
-        except KeyboardInterrupt:
-            print("\n[STOP] Monitoraggio OTC interrotto manualmente.")
+    if scelta in ASSET_LIST:
+        selected = ASSET_LIST[scelta]
+        if selected["type"] == "forex":
+            run_forex_analysis(selected["symbol"], selected["name"])
+        else:
+            try:
+                asyncio.run(run_otc_analysis(selected["symbol"], selected["name"]))
+            except KeyboardInterrupt:
+                print("\n[STOP] Monitoraggio interrotto manualmente.")
     else:
-        print("[ERRORE] Scelta non valida. Riavvia lo script.")
+        print("[ERRORE] Selezione non valida. Riavvia lo script.")
+
