@@ -1,271 +1,149 @@
-from datetime import datetime, timedelta
-import requests
-import streamlit as st
-import streamlit.components.v1 as components
+import asyncio
+import json
+import pandas as pd
+import numpy as np
 import yfinance as yf
+import websockets
 
-# Page configuration
-st.set_page_config(
-    page_title="Aura Pro Full", 
-    page_icon="⚡", 
-    layout="centered"
-)
+# ==========================================
+# CONFIGURAZIONE GENERALE BOT UNIFICATO
+# ==========================================
+SSID = "INSERISCI_QUI_IL_TUO_SSID_DEL_BROWSER"
+WEBSOCKET_URL = "wss://api.pocketoption.com/socket.io/?EIO=4&transport=websocket"
 
-# Custom Dark Mode styling
-st.markdown(
-    """
-    <style>
-    .main { background-color: #121212; color: #ffffff; }
-    .stButton>button { width: 100%; border-radius: 8px; font-weight: bold; background-color: #1f1f1f; color: #00ffcc; border: 1px solid #333333; }
-    .stButton>button:hover { background-color: #333333; color: #ffffff; border-color: #00ffcc; }
-    .market-badge { background-color: #1f1f1f; padding: 8px 12px; border-radius: 6px; border: 1px solid #333333; font-size: 14px; margin-bottom: 15px; text-align: center; }
-    .analysis-box { background-color: #1a1a1a; padding: 15px; border-radius: 8px; border: 1px solid #00ffcc; margin-top: 15px; }
-    .standby-box { background-color: #1a1a1a; padding: 15px; border-radius: 8px; border: 1px solid #ff4444; margin-top: 15px; text-align: center; color: #ff4444; font-weight: bold; }
-    </style>
-    """, 
-    unsafe_allow_html=True,
-)
+# ==========================================
+# MOTORE DI INDICATORI COMUNE
+# ==========================================
+def calculate_indicators(df):
+    if len(df) < 30:
+        return None, "Dati insufficienti per il calcolo"
+    
+    # 1. EMA 9 e 21
+    df['EMA_9'] = df['close'].ewm(span=9, adjust=False).mean()
+    df['EMA_21'] = df['close'].ewm(span=21, adjust=False).mean()
+    
+    # 2. RSI 14
+    delta = df['close'].diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+    rs = gain / loss
+    df['RSI'] = 100 - (100 / (1 + rs))
+    
+    # 3. Bande di Bollinger (20, 2)
+    df['BB_Middle'] = df['close'].rolling(window=20).mean()
+    std = df['close'].rolling(window=20).std()
+    df['BB_Upper'] = df['BB_Middle'] + (std * 2)
+    df['BB_Lower'] = df['BB_Middle'] - (std * 2)
+    
+    # 4. MACD (12, 26, 9)
+    exp1 = df['close'].ewm(span=12, adjust=False).mean()
+    exp2 = df['close'].ewm(span=26, adjust=False).mean()
+    df['MACD'] = exp1 - exp2
+    df['MACD_Signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
+    
+    last = df.iloc[-1]
+    
+    # Logica di Segnale (Bilanciata Standard)
+    signal = "STAND BY"
+    reason = "Mercato in equilibrio o filtri non allineati"
+    
+    if last['RSI'] < 38 and last['close'] <= last['BB_Lower'] and last['EMA_9'] > last['EMA_21']:
+        if last['MACD'] > last['MACD_Signal']:
+            signal = "BUY 🟢"
+            reason = "RSI ipervenduto, prezzo sotto la Bollinger inferiore, EMA rialzista e MACD favorevole."
+            
+    elif last['RSI'] > 62 and last['close'] >= last['BB_Upper'] and last['EMA_9'] < last['EMA_21']:
+        if last['MACD'] < last['MACD_Signal']:
+            signal = "SELL 🔴"
+            reason = "RSI ipercomprato, prezzo sopra la Bollinger superiore, EMA ribassista e MACD favorevole."
+            
+    return {
+        "time": str(last.get('time', 'Live')),
+        "close": last['close'],
+        "rsi": round(last['RSI'], 2),
+        "macd": round(last['MACD'], 5),
+        "signal": signal,
+        "reason": reason
+    }, None
 
-st.title("⚡ AURA PRO ⚡")
-
-# 19 coppie Forex
-assets_dict = {
-    "🇪🇺🇺🇸 EUR/USD": {"symbol": "EURUSD=X"},
-    "🇬🇧🇺🇸 GBP/USD": {"symbol": "GBPUSD=X"},
-    "🇺🇸🇯🇵 USD/JPY": {"symbol": "USDJPY=X"},
-    "🇦🇺🇺🇸 AUD/USD": {"symbol": "AUDUSD=X"},
-    "🇺🇸🇨🇦 USD/CAD": {"symbol": "USDCAD=X"},
-    "🇺🇸🇨🇭 USD/CHF": {"symbol": "USDCHF=X"},
-    "🇳🇿🇺🇸 NZD/USD": {"symbol": "NZDUSD=X"},
-    "🇬🇧🇯🇵 GBP/JPY": {"symbol": "GBPJPY=X"},
-    "🇪🇺🇯🇵 EUR/JPY": {"symbol": "EURJPY=X"},
-    "🇪🇺🇬🇧 EUR/GBP": {"symbol": "EURGBP=X"},
-    "🇦🇺🇯🇵 AUD/JPY": {"symbol": "AUDJPY=X"},
-    "🇪🇺🇦🇺 EUR/AUD": {"symbol": "EURAUD=X"},
-    "🇬🇧🇦🇺 GBP/AUD": {"symbol": "GBPAUD=X"},
-    "🇪🇺🇨🇦 EUR/CAD": {"symbol": "EURCAD=X"},
-    "🇬🇧🇨🇦 GBP/CAD": {"symbol": "GBPCAD=X"},
-    "🇦🇺🇨🇦 AUD/CAD": {"symbol": "AUDCAD=X"},
-    "🇪🇺🇨🇭 EUR/CHF": {"symbol": "EURCHF=X"},
-    "🇬🇧🇨🇭 GBP/CHF": {"symbol": "GBPCHF=X"},
-    "🇨🇭🇯🇵 CHF/JPY": {"symbol": "CHFJPY=X"}
-}
-
-selected_display = st.selectbox("Select Currency Pair", list(assets_dict.keys()), key="std_asset")
-selected_asset = assets_dict[selected_display]["symbol"]
-
-def get_market_sessions():
-    utc_hour = datetime.utcnow().hour
-    active = []
-    if 0 <= utc_hour < 9:
-        active.append("Tokyo 🟢")
-    if 8 <= utc_hour < 16:
-        active.append("London 🟢")
-    if 13 <= utc_hour < 21:
-        active.append("New York 🟢")
-    if not active:
-        return "Low Liquidity / Asian Session 🌙"
-    return " | ".join(active)
-
-st.markdown(f'<div class="market-badge">🌐 <b>Market Sessions:</b> {get_market_sessions()}</div>', unsafe_allow_html=True)
-
-st.markdown("### ⏰ Timeframe")
-scadenze = {
-    "M1 (60s)": 60,
-    "M3 (180s)": 180,
-    "M5 (300s)": 300,
-    "M10 (600s)": 600,
-    "M15 (900s)": 900
-}
-
-tf_choice = st.radio("Choose from time basket:", list(scadenze.keys()), horizontal=True, key="std_tf")
-tf_seconds = scadenze[tf_choice]
-
-def get_seconds_to_next_candle(seconds):
-    now = datetime.now()
-    total_secs = now.hour * 3600 + now.minute * 60 + now.second + now.microsecond / 1_000_000
-    return max(1, int(seconds - (total_secs % seconds)))
-
-def get_next_candle_time(seconds):
-    now = datetime.now()
-    return (now + timedelta(seconds=get_seconds_to_next_candle(seconds))).strftime("%H:%M:%S")
-
-def ultimate_institutional_analysis(ticker, timeframe_choice):
-    try:
-        interval_map = {
-            "M1 (60s)": "1m",
-            "M3 (180s)": "2m",
-            "M5 (300s)": "5m",
-            "M10 (600s)": "5m",
-            "M15 (900s)": "15m"
-        }
-        iv = interval_map.get(timeframe_choice, "1m")
-
-        df = yf.download(ticker, period="1d", interval=iv, progress=False)
-        if df.empty or len(df) < 35:
-            return "STAND BY", "N/A", "Insufficient Market Data", {}
-
-        close = df['Close']
-        delta = close.diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-        rs = gain / loss
-        rsi = 100 - (100 / (1 + rs))
-        current_rsi = float(rsi.iloc[-1].item())
-
-        ema9 = close.ewm(span=9, adjust=False).mean()
-        ema21 = close.ewm(span=21, adjust=False).mean()
-        is_bullish_trend = float(ema9.iloc[-1].item()) > float(ema21.iloc[-1].item())
-
-        sma20 = close.rolling(window=20).mean()
-        std20 = close.rolling(window=20).std()
-        upper_band = sma20 + (std20 * 2)
-        lower_band = sma20 - (std20 * 2)
-        curr_price = float(close.iloc[-1].item())
-        curr_lower = float(lower_band.iloc[-1].item())
-        curr_upper = float(upper_band.iloc[-1].item())
-
-        exp12 = close.ewm(span=12, adjust=False).mean()
-        exp26 = close.ewm(span=26, adjust=False).mean()
-        macd = exp12 - exp26
-        signal_line = macd.ewm(span=9, adjust=False).mean()
-        is_macd_bullish = float(macd.iloc[-1].item()) > float(signal_line.iloc[-1].item())
-
-        details = {
-            "RSI": f"{current_rsi:.1f}",
-            "Trend Breve (EMA 9/21)": "BULLISH 🟢" if is_bullish_trend else "BEARISH 🔴",
-            "Bollinger Position": "Near Lower Support" if curr_price <= curr_lower * 1.008 else ("Near Upper Resistance" if curr_price >= curr_upper * 0.992 else "Mid-Channel"),
-            "MACD Cross": "BULLISH 🟢" if is_macd_bullish else "BEARISH 🔴"
-        }
-
-        if is_bullish_trend and current_rsi <= 55 and curr_price <= (curr_lower * 1.01):
-            return "BUY 🟢", "89.0% - 92.0%", "Confluence Confirmed", details
-        elif not is_bullish_trend and current_rsi >= 45 and curr_price >= (curr_upper * 0.99):
-            return "SELL 🔴", "89.0% - 92.0%", "Confluence Confirmed", details
-        else:
-            return "STAND BY / NO TRADE", "N/A", "Market in Equilibrium", details
-
-    except Exception as e:
-        return "STAND BY", "N/A", f"Error: {str(e)}", {}
-
-def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence, entry_time):
-    bot_token = "INSERISCI_QUI_IL_TUO_BOT_TOKEN"
-    chat_id = "INSERISCI_QUI_IL_TUO_CHAT_ID"
-    if bot_token == "INSERISCI_QUI_IL_TUO_BOT_TOKEN":
+# ==========================================
+# MODULO 1: ANALISI FOREX REALE (yfinance)
+# ==========================================
+def analyze_forex(symbol="EURUSD=X", interval="1m"):
+    print(f"\n[FOREX] Analisi in corso per {symbol}...")
+    df = yf.download(symbol, period="1d", interval=interval, progress=False)
+    if df.empty:
+        print("[errore] Nessun dato ricevuto da yfinance.")
         return
-    message = (
-        f"⚡ *AURA PRO SIGNAL* ⚡\n\n"
-        f"🔹 *Asset:* `{display_name}`\n"
-        f"⏰ *Timeframe:* `{timeframe}`\n"
-        f"🎯 *Direction:* *{direction}*\n"
-        f"🕒 *Entry Time:* `{entry_time}`\n"
-        f"📈 *Expected Accuracy:* `{win_rate}`\n"
-        f"🛡️ *Status:* `{confidence}`\n"
-        f"💰 *Risk Management:* `1% Fixed Capital`"
-    )
-    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-    payload = {"chat_id": chat_id, "text": message, "parse_mode": "Markdown"}
+    
+    # Pulizia colonne multi-indice di yfinance se presenti
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = df.columns.get_level_values(0)
+        
+    analysis, err = calculate_indicators(df)
+    if analysis:
+        print(f"Prezzo: {analysis['close']} | RSI: {analysis['rsi']}")
+        print(f"-> Segnale: {analysis['signal']} | Motivo: {analysis['reason']}\n" + "-"*50)
+
+# ==========================================
+# MODULO 2: ANALISI OTC (WebSocket)
+# ==========================================
+async def analyze_otc(asset_target="EURUSD_otc"):
+    candles_df = pd.DataFrame(columns=['time', 'open', 'high', 'low', 'close', 'volume'])
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Origin": "https://pocketoption.com"
+    }
+    
+    print(f"\n[OTC] Connessione al flusso WebSocket per: {asset_target}...")
     try:
-        requests.post(url, json=payload, timeout=3)
-    except Exception:
-        pass
+        async with websockets.connect(WEBSOCKET_URL, extra_headers=headers) as ws:
+            await ws.send('40')
+            await ws.send(f'42["auth", {{"session": "{SSID}", "isDemo": 1}}]')
+            await ws.send(f'42["changeSymbol", "{asset_target}"]')
+            print(f"[SUCCESSO] Connesso a {asset_target}! In ascolto dei dati in tempo reale...\n")
+            
+            while True:
+                response = await ws.recv()
+                if response == "2":
+                    await ws.send("3")
+                    continue
+                
+                if response.startswith("42"):
+                    data = json.loads(response[2:])
+                    event_type = data[0]
+                    payload = data[1]
+                    
+                    if event_type in ["updateStream", "candleHistory"]:
+                        if isinstance(payload, list):
+                            candles_df = pd.DataFrame(payload)
+                        elif isinstance(payload, dict) and 'close' in payload:
+                            new_row = pd.DataFrame([payload])
+                            candles_df = pd.concat([candles_df, new_row], ignore_index=True)
+                            
+                        analysis, err = calculate_indicators(candles_df)
+                        if analysis:
+                            print(f"[OTC Feed] Prezzo: {analysis['close']} | RSI: {analysis['rsi']}")
+                            print(f"-> Segnale: {analysis['signal']} | Motivo: {analysis['reason']}\n" + "-"*50)
+                            
+    except Exception as e:
+        print(f"[ERRORE WEBSOCKET] {e}")
 
-if "signal_active_std" not in st.session_state: st.session_state.signal_active_std = False
-if "cached_asset_display_std" not in st.session_state: st.session_state.cached_asset_display_std = None
-if "cached_tf_choice_std" not in st.session_state: st.session_state.cached_tf_choice_std = None
-if "cached_tf_seconds_std" not in st.session_state: st.session_state.cached_tf_seconds_std = None
-if "cached_direction_std" not in st.session_state: st.session_state.cached_direction_std = None
-if "cached_win_rate_std" not in st.session_state: st.session_state.cached_win_rate_std = None
-if "cached_time_std" not in st.session_state: st.session_state.cached_time_std = None
-if "cached_confidence_std" not in st.session_state: st.session_state.cached_confidence_std = None
-if "cached_details_std" not in st.session_state: st.session_state.cached_details_std = {}
-
-if st.button("🚀 Run Institutional Analysis"):
-    direction, win_rate, confidence, details = ultimate_institutional_analysis(selected_asset, tf_choice)
-
-    st.session_state.cached_direction_std = direction
-    st.session_state.cached_win_rate_std = win_rate
-    st.session_state.cached_confidence_std = confidence
-    st.session_state.cached_time_std = get_next_candle_time(tf_seconds)
-    st.session_state.cached_asset_display_std = selected_display
-    st.session_state.cached_tf_choice_std = tf_choice
-    st.session_state.cached_tf_seconds_std = tf_seconds
-    st.session_state.cached_details_std = details
-    st.session_state.signal_active_std = True
-
-    if "STAND BY" not in direction:
-        send_telegram_alert(
-            selected_display, 
-            tf_choice, 
-            st.session_state.cached_direction_std, 
-            st.session_state.cached_win_rate_std, 
-            st.session_state.cached_confidence_std, 
-            st.session_state.cached_time_std
-        )
-
-if st.session_state.signal_active_std:
-    st.success("Analysis complete!")
-
-    st.markdown("### SIGNAL RESULT")
-    st.markdown(f"""
-    * **Asset:** `{st.session_state.cached_asset_display_std}`
-    * **Timeframe:** `{st.session_state.cached_tf_choice_std}`
-    * **Signal Direction:** **{st.session_state.cached_direction_std}**
-    * **Entry Time (Candle Close):** `{st.session_state.cached_time_std}`
-    * **Estimated Accuracy:** `{st.session_state.cached_win_rate_std}`
-    * **Filter Status:** `{st.session_state.cached_confidence_std}`
-    * **Money Management:** `1% Account Capital`
-    """)
-
-    details = st.session_state.cached_details_std
-    if details:
-        if "STAND BY" in st.session_state.cached_direction_std:
-            st.markdown(f"""
-            <div class="standby-box">
-                <h4>🛑 STAND BY: FILTRATO DA CONFLUENZA</h4>
-                <p>I parametri tecnici sul timeframe selezionato non sono allineati o il mercato è in equilibrio.</p>
-                <hr style="border-color: #ff4444;">
-                <p style="color: #ffffff; text-align: left;"><b>RSI:</b> {details.get('RSI', 'N/A')}</p>
-                <p style="color: #ffffff; text-align: left;"><b>Trend Breve:</b> {details.get('Trend Breve (EMA 9/21)', 'N/A')}</p>
-                <p style="color: #ffffff; text-align: left;"><b>Bollinger:</b> {details.get('Bollinger Position', 'N/A')}</p>
-                <p style="color: #ffffff; text-align: left;"><b>MACD:</b> {details.get('MACD Cross', 'N/A')}</p>
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            st.markdown(f"""
-            <div class="analysis-box">
-                <h4>📊 TECHNICAL METRICS ALIGNED</h4>
-                <p><b>RSI (14):</b> {details.get('RSI', 'N/A')}</p>
-                <p><b>Trend Breve:</b> {details.get('Trend Breve (EMA 9/21)', 'N/A')}</p>
-                <p><b>Posizione Bollinger:</b> {details.get('Bollinger Position', 'N/A')}</p>
-                <p><b>Momento MACD:</b> {details.get('MACD Cross', 'N/A')}</p>
-            </div>
-            """, unsafe_allow_html=True)
-
-    st.markdown("### ⏳ Current Candle Countdown")
-    initial_left = get_seconds_to_next_candle(st.session_state.cached_tf_seconds_std)
-
-    timer_html = f"""
-    <div style="font-size: 28px; font-weight: bold; color: #00ffcc; text-align: center; background-color: #1f1f1f; padding: 15px; border-radius: 8px; border: 1px solid #333333;" id="countdown_std">
-        Loading timer...
-    </div>
-    <script>
-    var timeLeftStd = {initial_left};
-    function updateTimerStd() {{
-        if (timeLeftStd <= 0) {{
-            document.getElementById("countdown_std").innerHTML = "⏰ CANDELA CHIUSA!";
-            document.getElementById("countdown_std").style.color = "#ff4444";
-            return;
-        }}
-        var minutes = Math.floor(timeLeftStd / 60);
-        var seconds = timeLeftStd % 60;
-        minutes = minutes < 10 ? "0" + minutes : minutes;
-        seconds = seconds < 10 ? "0" + seconds : seconds;
-        document.getElementById("countdown_std").innerHTML = "⏱️ " + minutes + ":" + seconds;
-        timeLeftStd--;
-    }}
-    setInterval(updateTimerStd, 1000);
-    updateTimerStd();
-    </script>
-    """
-    components.html(timer_html, height=80)
+# ==========================================
+# MENU PRINCIPALE DEL BOT
+# ==========================================
+if __name__ == "__main__":
+    print("=== BOT UNIFICATO FOREX & OTC ===")
+    print("1. Analizza Forex Reale (es. EURUSD=X)")
+    print("2. Avvia Monitoraggio WebSocket OTC (es. EURUSD_otc)")
+    
+    scelta = input("\nScegli la modalità (1 o 2): ").strip()
+    
+    if scelta == "1":
+        symbol_input = input("Inserisci il simbolo Forex (default EURUSD=X): ").strip() or "EURUSD=X"
+        analyze_forex(symbol_input)
+    elif scelta == "2":
+        asset_input = input("Inserisci l'asset OTC (default EURUSD_otc): ").strip() or "EURUSD_otc"
+        asyncio.run(analyze_otc(asset_input))
+    else:
+        print("Scelta non valida.")
