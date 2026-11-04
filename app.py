@@ -111,53 +111,53 @@ otc_dict = {
     "🇦🇺🇨🇦 AUD/CAD OTC": {"symbol": "AUDCAD=X"},
     "🇺🇸🇲🇽 USD/MXN OTC": {"symbol": "USDCAD=X"},
     "🇾🇪🇺🇸 YER/USD OTC": {"symbol": "EURUSD=X"},
-    "🇪🇺🇷🇺 EUR/RUB OTC": {"symbol": "EURUSD=X"},
+    "🇪🇺🇷🇺 EUR/RUB OTC": {"symbol": "EURRUB=X"},
     "🇳🇿🇺🇸 NZD/USD OTC": {"symbol": "NZDUSD=X"},
     "🇴🇲🇨🇳 OMR/CNY OTC": {"symbol": "EURUSD=X"}
 }
 
-# Lista ufficiale delle Criptovalute OTC da Pocket Option
+# Lista pulita delle Criptovalute OTC
 crypto_otc_dict = {
-    "₿ Bitcoin OTC (+92%)": {"symbol": "BTC-USD"},
-    "🔴 Polkadot OTC (+92%)": {"symbol": "DOT-USD"},
-    "Ł Litecoin OTC (+92%)": {"symbol": "LTC-USD"},
-    "💎 Toncoin OTC (+92%)": {"symbol": "TON-USD"},
-    "💜 Polygon OTC (+86%)": {"symbol": "MATIC-USD"},
-    "🔺 Avalanche OTC (+75%)": {"symbol": "AVAX-USD"},
-    "Ξ Ethereum OTC (+69%)": {"symbol": "ETH-USD"},
-    "🔗 Chainlink OTC (+62%)": {"symbol": "LINK-USD"},
-    "₳ Cardano OTC (+59%)": {"symbol": "ADA-USD"},
-    "📈 Bitcoin ETF OTC (+59%)": {"symbol": "IBIT"},
-    "🟡 BNB OTC (+54%)": {"symbol": "BNB-USD"},
-    "☀️ Solana OTC (+54%)": {"symbol": "SOL-USD"},
-    "🔴 TRON OTC (+46%)": {"symbol": "TRX-USD"}
+    "₿ Bitcoin OTC": {"symbol": "BTC-USD"},
+    "🔴 Polkadot OTC": {"symbol": "DOT-USD"},
+    "Ł Litecoin OTC": {"symbol": "LTC-USD"},
+    "💎 Toncoin OTC": {"symbol": "TON-USD"},
+    "💜 Polygon OTC": {"symbol": "MATIC-USD"},
+    "🔺 Avalanche OTC": {"symbol": "AVAX-USD"},
+    "Ξ Ethereum OTC": {"symbol": "ETH-USD"},
+    "🔗 Chainlink OTC": {"symbol": "LINK-USD"},
+    "₳ Cardano OTC": {"symbol": "ADA-USD"},
+    "📈 Bitcoin ETF OTC": {"symbol": "IBIT"},
+    "🟡 BNB OTC": {"symbol": "BNB-USD"},
+    "☀️ Solana OTC": {"symbol": "SOL-USD"},
+    "🔴 TRON OTC": {"symbol": "TRX-USD"}
 }
 
-# Lista ufficiale delle Azioni OTC da Pocket Option
+# Lista pulita delle Azioni OTC
 stocks_otc_dict = {
-    "💳 American Express OTC (+92%)": {"symbol": "AXP"},
-    "💊 Johnson & Johnson OTC (+92%)": {"symbol": "JNJ"},
-    "💻 Microsoft OTC (+92%)": {"symbol": "MSFT"},
-    "🧪 Pfizer Inc OTC (+92%)": {"symbol": "PFE"},
-    "🪙 Coinbase Global OTC (+92%)": {"symbol": "COIN"},
-    "📦 FedEx OTC (+92%)": {"symbol": "FDX"},
-    "📊 VIX OTC (+92%)": {"symbol": "^VIX"},
-    "🍎 Apple OTC (+91%)": {"symbol": "AAPL"},
-    "🔌 Cisco OTC (+90%)": {"symbol": "CSCO"},
-    "🚗 Tesla OTC (+85%)": {"symbol": "TSLA"},
-    "🛢️ ExxonMobil OTC (+85%)": {"symbol": "XOM"},
-    "⛏️ Marathon Digital Holdings OTC (+79%)": {"symbol": "MARA"},
-    "💳 VISA OTC (+75%)": {"symbol": "V"},
-    "🏦 Citigroup Inc OTC (+74%)": {"symbol": "C"},
-    "🍿 Netflix OTC (+65%)": {"symbol": "NFLX"},
-    "💻 Intel OTC (+59%)": {"symbol": "INTC"},
-    "🍟 McDonald's OTC (+54%)": {"symbol": "MCD"},
-    "👁️ Palantir Technologies OTC (+48%)": {"symbol": "PLTR"},
-    "✈️ Boeing Company OTC (+47%)": {"symbol": "BA"},
-    "📦 Amazon OTC (+40%)": {"symbol": "AMZN"},
-    "📱 Advanced Micro Devices OTC (+39%)": {"symbol": "AMD"},
-    "👥 FACEBOOK INC OTC (+35%)": {"symbol": "META"},
-    "🛒 Alibaba OTC (+34%)": {"symbol": "BABA"},
+    "💳 American Express OTC": {"symbol": "AXP"},
+    "💊 Johnson & Johnson OTC": {"symbol": "JNJ"},
+    "💻 Microsoft OTC": {"symbol": "MSFT"},
+    "🧪 Pfizer Inc OTC": {"symbol": "PFE"},
+    "🪙 Coinbase Global OTC": {"symbol": "COIN"},
+    "📦 FedEx OTC": {"symbol": "FDX"},
+    "📊 VIX OTC": {"symbol": "^VIX"},
+    "🍎 Apple OTC": {"symbol": "AAPL"},
+    "🔌 Cisco OTC": {"symbol": "CSCO"},
+    "🚗 Tesla OTC": {"symbol": "TSLA"},
+    "🛢️ ExxonMobil OTC": {"symbol": "XOM"},
+    "⛏️ Marathon Digital Holdings OTC": {"symbol": "MARA"},
+    "💳 VISA OTC": {"symbol": "V"},
+    "🏦 Citigroup Inc OTC": {"symbol": "C"},
+    "🍿 Netflix OTC": {"symbol": "NFLX"},
+    "💻 Intel OTC": {"symbol": "INTC"},
+    "🍟 McDonald's OTC": {"symbol": "MCD"},
+    "👁️ Palantir Technologies OTC": {"symbol": "PLTR"},
+    "✈️ Boeing Company OTC": {"symbol": "BA"},
+    "📦 Amazon OTC": {"symbol": "AMZN"},
+    "📱 Advanced Micro Devices OTC": {"symbol": "AMD"},
+    "👥 FACEBOOK INC OTC": {"symbol": "META"},
+    "🛒 Alibaba OTC": {"symbol": "BABA"},
     "🎮 GameStop Corp OTC": {"symbol": "GME"}
 }
 
@@ -266,7 +266,7 @@ def ultimate_institutional_analysis(ticker, timeframe_choice):
         else:
             return "STAND BY / NO TRADE", "N/A", "Market in Equilibrium", details
 
-        # Calcolo Dinamico dell'Intelligenza/Confidenza del Bot (Reale e basato sui dati)
+        # Calcolo Dinamico dell'Intelligenza/Confidenza del Bot
         score = 52.0
         if "BUY" in direction:
             if current_rsi <= 30: score += 12.0
@@ -410,5 +410,3 @@ if st.session_state.signal_active_snp:
     </script>
     """
     components.html(timer_html, height=80)
-
-
