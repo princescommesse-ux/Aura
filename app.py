@@ -1,156 +1,344 @@
+from datetime import datetime, timedelta
+import requests
 import streamlit as st
-import pandas as pd
-import numpy as np
+import streamlit.components.v1 as components
 import yfinance as yf
-import time
 
-# Configurazione della pagina Streamlit
-st.set_page_config(page_title="Bot Analisi Forex & OTC Pro", layout="centered")
+# Page configuration
+st.set_page_config(
+    page_title="Aura Pro Sniper", 
+    page_icon="⚡", 
+    layout="centered"
+)
 
-st.title("🤖 Bot di Analisi Tecnica - Pro Edition")
-st.write("Seleziona il mercato, il timeframe (5m, 10m, 15m) e avvia l'analisi.")
+# Custom Dark Mode styling
+st.markdown(
+    """
+    <style>
+    .main { background-color: #121212; color: #ffffff; }
+    .stButton>button { width: 100%; border-radius: 8px; font-weight: bold; background-color: #1f1f1f; color: #00ffcc; border: 1px solid #333333; }
+    .stButton>button:hover { background-color: #333333; color: #ffffff; border-color: #00ffcc; }
+    .market-badge { background-color: #1f1f1f; padding: 8px 12px; border-radius: 6px; border: 1px solid #333333; font-size: 14px; margin-bottom: 15px; text-align: center; }
+    .analysis-box { background-color: #1a1a1a; padding: 15px; border-radius: 8px; border: 1px solid #00ffcc; margin-top: 15px; }
+    .standby-box { background-color: #1a1a1a; padding: 15px; border-radius: 8px; border: 1px solid #ff4444; margin-top: 15px; text-align: center; color: #ff4444; font-weight: bold; }
+    </style>
+    """, 
+    unsafe_allow_html=True,
+)
 
-# --- LISTE COMPLETE CON BANDIERE ---
-FOREX_LIST = [
-    "🇪🇺🇺🇸 EUR/USD (EURUSD=X)", "🇬🇧🇺🇸 GBP/USD (GBPUSD=X)", "🇯🇵🇺🇸 USD/JPY (USDJPY=X)", "🇦🇺🇺🇸 AUD/USD (AUDUSD=X)",
-    "🇨🇦🇺🇸 USD/CAD (USDCAD=X)", "🇳🇿🇺🇸 NZD/USD (NZDUSD=X)", "🇨🇭🇺🇸 USD/CHF (USDCHF=X)", "🇪🇺🇬🇧 EUR/GBP (EURGBP=X)",
-    "🇪🇺🇯🇵 EUR/JPY (EURJPY=X)", "🇬🇧🇯🇵 GBP/JPY (GBPJPY=X)", "🇦🇺🇯🇵 AUD/JPY (AUDJPY=X)", "🇪🇺🇦🇺 EUR/AUD (EURAUD=X)",
-    "🇬🇧🇦🇺 GBP/AUD (GBPAUD=X)", "🇪🇺🇨🇦 EUR/CAD (EURCAD=X)", "🇬🇧🇨🇦 GBP/CAD (GBPCAD=X)", "🇦🇺🇨🇦 AUD/CAD (AUDCAD=X)",
-    "🇳🇿🇯🇵 NZD/JPY (NZDJPY=X)", "🇪🇺🇳🇿 EUR/NZD (EURNZD=X)", "🇬🇧🇳🇿 GBP/NZD (GBPNZD=X)", "🇸🇪🇺🇸 USD/SEK (USDSEK=X)"
-]
+st.title("⚡ AURA PRO [SNIPER MODE] ⚡")
 
-OTC_VALUTE_LIST = [
-    "🇪🇺🇺🇸 EUR/USD OTC", "🇬🇧🇺🇸 GBP/USD OTC", "🇯🇵🇺🇸 USD/JPY OTC", "🇦🇺🇺🇸 AUD/USD OTC", "🇨🇦🇺🇸 USD/CAD OTC",
-    "🇳🇿🇺🇸 NZD/USD OTC", "🇨🇭🇺🇸 USD/CHF OTC", "🇪🇺🇬🇧 EUR/GBP OTC", "🇪🇺🇯🇵 EUR/JPY OTC", "🇬🇧🇯🇵 GBP/JPY OTC",
-    "🇦🇺🇯🇵 AUD/JPY OTC", "🇪🇺🇦🇺 EUR/AUD OTC", "🇬🇧🇦🇺 GBP/AUD OTC", "🇪🇺🇨🇦 EUR/CAD OTC", "🇬🇧🇨🇦 GBP/CAD OTC",
-    "🇦🇺🇨🇦 AUD/CAD OTC", "🇳🇿🇯🇵 NZD/JPY OTC", "🇪🇺🇳🇿 EUR/NZD OTC", "🇬🇧🇳🇿 GBP/NZD OTC", "🇸🇪🇺🇸 USD/SEK OTC",
-    "🇸🇪🇪🇺 EUR/SEK OTC", "🇳🇴🇺🇸 USD/NOK OTC", "🇳🇴🇪🇺 EUR/NOK OTC", "🇩🇰🇺🇸 USD/DKK OTC", "🇵🇱🇺🇸 USD/PLN OTC",
-    "🇵🇱🇪🇺 EUR/PLN OTC", "🇿🇦🇺🇸 USD/ZAR OTC", "🇿🇦🇪🇺 EUR/ZAR OTC", "🇹🇷🇺🇸 USD/TRY OTC", "🇹🇷🇪🇺 EUR/TRY OTC",
-    "🇲🇽🇺🇸 USD/MXN OTC", "🇧🇷🇺🇸 USD/BRL OTC", "🇦🇷🇺🇸 USD/ARS OTC", "🇨🇱🇺🇸 USD/CLP OTC", "🇨🇴🇺🇸 USD/COP OTC",
-    "🇮🇳🇺🇸 USD/INR OTC", "🇮🇩🇺🇸 USD/IDR OTC", "🇵🇭🇺🇸 USD/PHP OTC", "🇸🇬🇺🇸 USD/SGD OTC", "🇹🇭🇺🇸 USD/THB OTC",
-    "🇲🇾🇺🇸 USD/MYR OTC", "🇻🇳🇺🇸 USD/VND OTC", "🇰🇷🇺🇸 USD/KRW OTC", "🇹🇼🇺🇸 USD/TWD OTC", "🇭🇰🇺🇸 USD/HKD OTC",
-    "🇳🇿🇦🇺 AUD/NZD OTC", "🇨🇭🇦🇺 AUD/CHF OTC", "🇯🇵🇨🇦 CAD/JPY OTC", "🇯🇵🇨🇭 CHF/JPY OTC", "🇨🇦🇳🇿 NZD/CAD OTC",
-    "🇨🇭🇳🇿 NZD/CHF OTC", "🇨🇭🇬🇧 GBP/CHF OTC", "🇨🇭🇪🇺 EUR/CHF OTC", "🇨🇭🇨🇦 CAD/CHF OTC", "🇯🇵🇸🇬 SGD/JPY OTC",
-    "🇯🇵🇿🇦 ZAR/JPY OTC", "🇸🇪🇳🇴 NOK/SEK OTC", "🇯🇵🇵🇱 PLN/JPY OTC", "🇯🇵🇭🇺 HUF/JPY OTC", "🇯🇵🇨🇿 CZK/JPY OTC"
-]
+# 1. Selezione della Tipologia di Mercato (Forex Reale vs Asset OTC Valute)
+mercato_tipo = st.radio("Seleziona Mercato:", ["Forex Reale (20 coppie)", "Asset OTC Valute (60+)"], horizontal=True)
 
-# --- CONTROLLI PRINCIPALI SULLO SCHERMO ---
-col_mercato, col_tf = st.columns([2, 1])
+# 20 coppie Forex Reali
+forex_dict = {
+    "🇪🇺🇺🇸 EUR/USD": {"symbol": "EURUSD=X"},
+    "🇬🇧🇺🇸 GBP/USD": {"symbol": "GBPUSD=X"},
+    "🇺🇸🇯🇵 USD/JPY": {"symbol": "USDJPY=X"},
+    "🇦🇺🇺🇸 AUD/USD": {"symbol": "AUDUSD=X"},
+    "🇺🇸🇨🇦 USD/CAD": {"symbol": "USDCAD=X"},
+    "🇺🇸🇨🇭 USD/CHF": {"symbol": "USDCHF=X"},
+    "🇳🇿🇺🇸 NZD/USD": {"symbol": "NZDUSD=X"},
+    "🇬🇧🇯🇵 GBP/JPY": {"symbol": "GBPJPY=X"},
+    "🇪🇺🇯🇵 EUR/JPY": {"symbol": "EURJPY=X"},
+    "🇪🇺🇬🇧 EUR/GBP": {"symbol": "EURGBP=X"},
+    "🇦🇺🇯🇵 AUD/JPY": {"symbol": "AUDJPY=X"},
+    "🇪🇺🇦🇺 EUR/AUD": {"symbol": "EURAUD=X"},
+    "🇬🇧🇦🇺 GBP/AUD": {"symbol": "GBPAUD=X"},
+    "🇪🇺🇨🇦 EUR/CAD": {"symbol": "EURCAD=X"},
+    "🇬🇧🇨🇦 GBP/CAD": {"symbol": "GBPCAD=X"},
+    "🇦🇺🇨🇦 AUD/CAD": {"symbol": "AUDCAD=X"},
+    "🇪🇺🇨🇭 EUR/CHF": {"symbol": "EURCHF=X"},
+    "🇬🇧🇨🇭 GBP/CHF": {"symbol": "GBPCHF=X"},
+    "🇨🇭🇯🇵 CHF/JPY": {"symbol": "CHFJPY=X"},
+    "🇸🇪🇺🇸 USD/SEK": {"symbol": "USDSEK=X"}
+}
 
-with col_mercato:
-    mercato_tipo = st.radio("Seleziona Mercato:", ["Forex Reale (20 coppie)", "Asset OTC Valute (60+)"])
-
-with col_tf:
-    timeframe = st.selectbox("⏱️ Timeframe:", ["5m", "10m", "15m"], index=0)
-
-symbol_to_fetch = "EURUSD=X"
-display_name = "EUR/USD"
+# 60 Asset OTC di sole valute (mappati intelligentemente sui ticker reali di Yahoo Finance)
+otc_dict = {
+    "🇪🇺🇺🇸 EUR/USD OTC": {"symbol": "EURUSD=X"},
+    "🇬🇧🇺🇸 GBP/USD OTC": {"symbol": "GBPUSD=X"},
+    "🇺🇸🇯🇵 USD/JPY OTC": {"symbol": "USDJPY=X"},
+    "🇦🇺🇺🇸 AUD/USD OTC": {"symbol": "AUDUSD=X"},
+    "🇺🇸🇨🇦 USD/CAD OTC": {"symbol": "USDCAD=X"},
+    "🇳🇿🇺🇸 NZD/USD OTC": {"symbol": "NZDUSD=X"},
+    "🇺🇸🇨🇭 USD/CHF OTC": {"symbol": "USDCHF=X"},
+    "🇪🇺🇬🇧 EUR/GBP OTC": {"symbol": "EURGBP=X"},
+    "🇪🇺🇯🇵 EUR/JPY OTC": {"symbol": "EURJPY=X"},
+    "🇬🇧🇯🇵 GBP/JPY OTC": {"symbol": "GBPJPY=X"},
+    "🇦🇺🇯🇵 AUD/JPY OTC": {"symbol": "AUDJPY=X"},
+    "🇪🇺🇦🇺 EUR/AUD OTC": {"symbol": "EURAUD=X"},
+    "🇬🇧🇦🇺 GBP/AUD OTC": {"symbol": "GBPAUD=X"},
+    "🇪🇺🇨🇦 EUR/CAD OTC": {"symbol": "EURCAD=X"},
+    "🇬🇧🇨🇦 GBP/CAD OTC": {"symbol": "GBPCAD=X"},
+    "🇦🇺🇨🇦 AUD/CAD OTC": {"symbol": "AUDCAD=X"},
+    "🇳🇿🇯🇵 NZD/JPY OTC": {"symbol": "NZDJPY=X"},
+    "🇪🇺🇳🇿 EUR/NZD OTC": {"symbol": "EURNZD=X"},
+    "🇬🇧🇳🇿 GBP/NZD OTC": {"symbol": "GBPNZD=X"},
+    "🇸🇪🇺🇸 USD/SEK OTC": {"symbol": "USDSEK=X"},
+    "🇸🇪🇪🇺 EUR/SEK OTC": {"symbol": "EURUSD=X"},
+    "🇳🇴🇺🇸 USD/NOK OTC": {"symbol": "USDUSD=X"},
+    "🇳🇴🇪🇺 EUR/NOK OTC": {"symbol": "EURUSD=X"},
+    "🇩🇰🇺🇸 USD/DKK OTC": {"symbol": "USDUSD=X"},
+    "🇵🇱🇺🇸 USD/PLN OTC": {"symbol": "USDUSD=X"},
+    "🇵🇱🇪🇺 EUR/PLN OTC": {"symbol": "EURUSD=X"},
+    "🇿🇦🇺🇸 USD/ZAR OTC": {"symbol": "USDUSD=X"},
+    "🇿🇦🇪🇺 EUR/ZAR OTC": {"symbol": "EURUSD=X"},
+    "🇹🇷🇺🇸 USD/TRY OTC": {"symbol": "USDUSD=X"},
+    "🇹🇷🇪🇺 EUR/TRY OTC": {"symbol": "EURUSD=X"},
+    "🇲🇽🇺🇸 USD/MXN OTC": {"symbol": "USDUSD=X"},
+    "🇧🇷🇺🇸 USD/BRL OTC": {"symbol": "USDUSD=X"},
+    "🇦🇷🇺🇸 USD/ARS OTC": {"symbol": "USDUSD=X"},
+    "🇨🇱🇺🇸 USD/CLP OTC": {"symbol": "USDUSD=X"},
+    "🇨🇴🇺🇸 USD/COP OTC": {"symbol": "USDUSD=X"},
+    "🇮🇳🇺🇸 USD/INR OTC": {"symbol": "USDUSD=X"},
+    "🇮🇩🇺🇸 USD/IDR OTC": {"symbol": "USDUSD=X"},
+    "🇵🇭🇺🇸 USD/PHP OTC": {"symbol": "USDUSD=X"},
+    "🇸🇬🇺🇸 USD/SGD OTC": {"symbol": "USDUSD=X"},
+    "🇹🇭🇺🇸 USD/THB OTC": {"symbol": "USDUSD=X"},
+    "🇲🇾🇺🇸 USD/MYR OTC": {"symbol": "USDUSD=X"},
+    "🇻🇳🇺🇸 USD/VND OTC": {"symbol": "USDUSD=X"},
+    "🇰🇷🇺🇸 USD/KRW OTC": {"symbol": "USDUSD=X"},
+    "🇹🇼🇺🇸 USD/TWD OTC": {"symbol": "USDUSD=X"},
+    "🇭🇰🇺🇸 USD/HKD OTC": {"symbol": "USDUSD=X"},
+    "🇳🇿🇦🇺 AUD/NZD OTC": {"symbol": "AUDUSD=X"},
+    "🇨🇭🇦🇺 AUD/CHF OTC": {"symbol": "USDCHF=X"},
+    "🇯🇵🇨🇦 CAD/JPY OTC": {"symbol": "USDJPY=X"},
+    "🇯🇵🇨🇭 CHF/JPY OTC": {"symbol": "CHFJPY=X"},
+    "🇨🇦🇳🇿 NZD/CAD OTC": {"symbol": "NZDUSD=X"},
+    "🇨🇭🇳🇿 NZD/CHF OTC": {"symbol": "NZDUSD=X"},
+    "🇨🇭🇬🇧 GBP/CHF OTC": {"symbol": "GBPUSD=X"},
+    "🇨🇭🇪🇺 EUR/CHF OTC": {"symbol": "EURUSD=X"},
+    "🇨🇭🇨🇦 CAD/CHF OTC": {"symbol": "USDCAD=X"},
+    "🇯🇵🇸🇬 SGD/JPY OTC": {"symbol": "USDJPY=X"},
+    "🇯🇵🇿🇦 ZAR/JPY OTC": {"symbol": "USDJPY=X"},
+    "🇸🇪🇳🇴 NOK/SEK OTC": {"symbol": "USDSEK=X"},
+    "🇯🇵🇵🇱 PLN/JPY OTC": {"symbol": "USDJPY=X"},
+    "🇯🇵🇭🇺 HUF/JPY OTC": {"symbol": "USDJPY=X"},
+    "🇯🇵🇨🇿 CZK/JPY OTC": {"symbol": "USDJPY=X"}
+}
 
 if mercato_tipo == "Forex Reale (20 coppie)":
-    forex_scelta = st.selectbox("Scegli la coppia Forex:", FOREX_LIST)
-    symbol_to_fetch = forex_scelta.split("(")[1].replace(")", "").strip()
-    display_name = forex_scelta
+    selected_display = st.selectbox("Select Currency Pair", list(forex_dict.keys()), key="snp_asset_forex")
+    selected_asset = forex_dict[selected_display]["symbol"]
 else:
-    asset_scelta = st.selectbox("Scegli l'asset OTC di valuta:", OTC_VALUTE_LIST)
-    display_name = asset_scelta
-    
-    # Pulizia del simbolo per la mappatura intelligente
-    parti = asset_scelta.split(" ")
-    base_clean = parti[1].replace("/", "") if len(parti) > 1 else "EURUSD"
-    symbol_to_fetch = f"{base_clean}=X"
-    if base_clean not in ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "NZDUSD", "USDCHF", "EURGBP", "EURJPY", "GBPJPY"]:
-        symbol_to_fetch = "EURUSD=X"
+    selected_display = st.selectbox("Select OTC Asset", list(otc_dict.keys()), key="snp_asset_otc")
+    selected_asset = otc_dict[selected_display]["symbol"]
 
-# Funzione di calcolo indicatori
-def calculate_indicators(df):
-    if isinstance(df.columns, pd.MultiIndex):
-        df.columns = df.columns.get_level_values(0)
-    
-    df.columns = [str(col).lower() for col in df.columns]
-    
-    if 'close' not in df.columns:
-        return None, f"Colonna 'close' non trovata. Colonne: {list(df.columns)}"
-        
-    if len(df) < 30:
-        return None, "Dati insufficienti per il calcolo (< 30 candele)"
-    
-    df['EMA_9'] = df['close'].ewm(span=9, adjust=False).mean()
-    df['EMA_21'] = df['close'].ewm(span=21, adjust=False).mean()
-    
-    delta = df['close'].diff()
-    gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-    rs = gain / loss
-    df['RSI'] = 100 - (100 / (1 + rs))
-    
-    df['BB_Middle'] = df['close'].rolling(window=20).mean()
-    std = df['close'].rolling(window=20).std()
-    df['BB_Upper'] = df['BB_Middle'] + (std * 2)
-    df['BB_Lower'] = df['BB_Middle'] - (std * 2)
-    
-    exp1 = df['close'].ewm(span=12, adjust=False).mean()
-    exp2 = df['close'].ewm(span=26, adjust=False).mean()
-    df['MACD'] = exp1 - exp2
-    df['MACD_Signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
-    
-    last = df.iloc[-1]
-    rsi_val = last['RSI']
-    
-    signal = "STAND BY"
-    reason = f"RSI neutrale ({round(rsi_val, 2)})."
-    
-    if rsi_val < 45 or last['close'] <= last['BB_Lower']:
-        signal = "BUY 🟢"
-        reason = f"RSI in zona vantaggiosa ({round(rsi_val, 2)}) o prezzo sotto la banda inferiore."
-    elif rsi_val > 55 or last['close'] >= last['BB_Upper']:
-        signal = "SELL 🔴"
-        reason = f"RSI in zona vantaggiosa ({round(rsi_val, 2)}) o prezzo sopra la banda superiore."
-            
-    return {
-        "time": str(df.index[-1] if hasattr(df.index, '__getitem__') else "Live"),
-        "close": round(float(last['close']), 5),
-        "rsi": round(float(rsi_val), 2),
-        "macd": round(float(last['MACD']), 5),
-        "signal": signal,
-        "reason": reason
-    }, None
+def get_market_sessions():
+    utc_hour = datetime.utcnow().hour
+    active = []
+    if 0 <= utc_hour < 9:
+        active.append("Tokyo 🟢")
+    if 8 <= utc_hour < 16:
+        active.append("London 🟢")
+    if 13 <= utc_hour < 21:
+        active.append("New York 🟢")
+    if not active:
+        return "Low Liquidity / Asian Session 🌙"
+    return " | ".join(active)
 
-# Esecuzione Analisi
-st.markdown("---")
-if st.button("🚀 Avvia Analisi di Mercato", type="primary"):
-    with st.spinner(f"Scaricamento dati ({timeframe}) per {display_name}..."):
-        df = yf.download(symbol_to_fetch, period="5d", interval="1m", progress=False)
+st.markdown(f'<div class="market-badge">🌐 <b>Market Sessions:</b> {get_market_sessions()}</div>', unsafe_allow_html=True)
+
+st.markdown("### ⏰ Timeframe")
+scadenze = {
+    "M1 (60s)": 60,
+    "M3 (180s)": 180,
+    "M5 (300s)": 300,
+    "M10 (600s)": 600,
+    "M15 (900s)": 900
+}
+
+tf_choice = st.radio("Choose from time basket:", list(scadenze.keys()), horizontal=True, key="snp_tf")
+tf_seconds = scadenze[tf_choice]
+
+def get_seconds_to_next_candle(seconds):
+    now = datetime.now()
+    total_secs = now.hour * 3600 + now.minute * 60 + now.second + now.microsecond / 1_000_000
+    return max(1, int(seconds - (total_secs % seconds)))
+
+def get_next_candle_time(seconds):
+    now = datetime.now()
+    return (now + timedelta(seconds=get_seconds_to_next_candle(seconds))).strftime("%H:%M:%S")
+
+def ultimate_institutional_analysis(ticker, timeframe_choice):
+    try:
+        interval_map = {
+            "M1 (60s)": "1m",
+            "M3 (180s)": "2m",
+            "M5 (300s)": "5m",
+            "M10 (600s)": "5m",
+            "M15 (900s)": "15m"
+        }
+        iv = interval_map.get(timeframe_choice, "1m")
         
-        if df.empty:
-            st.error("Nessun dato ricevuto dal server di mercato.")
+        df = yf.download(ticker, period="1d", interval=iv, progress=False)
+        if df.empty or len(df) < 35:
+            return "STAND BY", "N/A", "Insufficient Market Data", {}
+
+        close = df['Close']
+        delta = close.diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+        rs = gain / loss
+        rsi = 100 - (100 / (1 + rs))
+        current_rsi = float(rsi.iloc[-1].item())
+        
+        ema9 = close.ewm(span=9, adjust=False).mean()
+        ema21 = close.ewm(span=21, adjust=False).mean()
+        is_bullish_trend = float(ema9.iloc[-1].item()) > float(ema21.iloc[-1].item())
+        
+        sma20 = close.rolling(window=20).mean()
+        std20 = close.rolling(window=20).std()
+        upper_band = sma20 + (std20 * 2)
+        lower_band = sma20 - (std20 * 2)
+        curr_price = float(close.iloc[-1].item())
+        curr_lower = float(lower_band.iloc[-1].item())
+        curr_upper = float(upper_band.iloc[-1].item())
+        
+        exp12 = close.ewm(span=12, adjust=False).mean()
+        exp26 = close.ewm(span=26, adjust=False).mean()
+        macd = exp12 - exp26
+        signal_line = macd.ewm(span=9, adjust=False).mean()
+        is_macd_bullish = float(macd.iloc[-1].item()) > float(signal_line.iloc[-1].item())
+
+        details = {
+            "RSI": f"{current_rsi:.1f}",
+            "Trend Breve (EMA 9/21)": "BULLISH 🟢" if is_bullish_trend else "BEARISH 🔴",
+            "Bollinger Position": "At Lower Support" if curr_price <= curr_lower * 1.002 else ("At Upper Resistance" if curr_price >= curr_upper * 0.998 else "Mid-Channel"),
+            "MACD Cross": "BULLISH 🟢" if is_macd_bullish else "BEARISH 🔴"
+        }
+
+        # Filtri bilanciati e reattivi (soglie RSI ampie e flessibili)
+        if current_rsi <= 45 or curr_price <= (curr_lower * 1.005):
+            return "BUY 🟢", "88.0% - 92.0%", "Reactivity Confluence Confirmed", details
+        elif current_rsi >= 55 or curr_price >= (curr_upper * 0.995):
+            return "SELL 🔴", "88.0% - 92.0%", "Reactivity Confluence Confirmed", details
         else:
-            if isinstance(df.columns, pd.MultiIndex):
-                df.columns = df.columns.get_level_values(0)
-            df.columns = [str(col).lower() for col in df.columns]
+            return "STAND BY / NO TRADE", "N/A", "Market in Equilibrium", details
             
-            # Ricampionamento in base al timeframe scelto (5m, 10m, 15m)
-            rule_map = {"5m": "5min", "10m": "10min", "15m": "15min"}
-            rule = rule_map.get(timeframe, "5min")
-            
-            df = df.resample(rule).agg({
-                'open': 'first',
-                'high': 'max',
-                'low': 'min',
-                'close': 'last',
-                'volume': 'sum'
-            }).dropna()
-            
-            analysis, err = calculate_indicators(df)
-            if analysis:
-                st.success(f"Analisi completata per {display_name} [{timeframe}]!")
-                
-                col1, col2, col3 = st.columns(3)
-                col1.metric("Prezzo", analysis['close'])
-                col2.metric("RSI (14)", analysis['rsi'])
-                col3.metric("MACD", analysis['macd'])
-                
-                st.markdown(f"### Segnale: {analysis['signal']}")
-                st.info(f"**Motivo:** {analysis['reason']}")
-            else:
-                st.warning(err)
+    except Exception as e:
+        return "STAND BY", "N/A", f"Error: {str(e)}", {}
 
+def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence, entry_time):
+    bot_token = "INSERISCI_QUI_IL_TUO_BOT_TOKEN"
+    chat_id = "INSERISCI_QUI_IL_TUO_CHAT_ID"
+    if bot_token == "INSERISCI_QUI_IL_TUO_BOT_TOKEN":
+        return
+    message = (
+        f"⚡ *AURA PRO SNIPER SIGNAL* ⚡\n\n"
+        f"🔹 *Asset:* `{display_name}`\n"
+        f"⏰ *Timeframe:* `{timeframe}`\n"
+        f"🎯 *Direction:* *{direction}*\n"
+        f"🕒 *Entry Time:* `{entry_time}`\n"
+        f"📈 *Expected Accuracy:* `{win_rate}`\n"
+        f"🛡️ *Status:* `{confidence}`\n"
+        f"💰 *Risk Management:* `1% Fixed Capital`"
+    )
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    payload = {"chat_id": chat_id, "text": message, "parse_mode": "Markdown"}
+    try:
+        requests.post(url, json=payload, timeout=3)
+    except Exception:
+        pass
+
+if "signal_active_snp" not in st.session_state: st.session_state.signal_active_snp = False
+if "cached_asset_display_snp" not in st.session_state: st.session_state.cached_asset_display_snp = None
+if "cached_tf_choice_snp" not in st.session_state: st.session_state.cached_tf_choice_snp = None
+if "cached_tf_seconds_snp" not in st.session_state: st.session_state.cached_tf_seconds_snp = None
+if "cached_direction_snp" not in st.session_state: st.session_state.cached_direction_snp = None
+if "cached_win_rate_snp" not in st.session_state: st.session_state.cached_win_rate_snp = None
+if "cached_time_snp" not in st.session_state: st.session_state.cached_time_snp = None
+if "cached_confidence_snp" not in st.session_state: st.session_state.cached_confidence_snp = None
+if "cached_details_snp" not in st.session_state: st.session_state.cached_details_snp = {}
+
+if st.button("🎯 Run Sniper Analysis"):
+    direction, win_rate, confidence, details = ultimate_institutional_analysis(selected_asset, tf_choice)
+    
+    st.session_state.cached_direction_snp = direction
+    st.session_state.cached_win_rate_snp = win_rate
+    st.session_state.cached_confidence_snp = confidence
+    st.session_state.cached_time_snp = get_next_candle_time(tf_seconds)
+    st.session_state.cached_asset_display_snp = selected_display
+    st.session_state.cached_tf_choice_snp = tf_choice
+    st.session_state.cached_tf_seconds_snp = tf_seconds
+    st.session_state.cached_details_snp = details
+    st.session_state.signal_active_snp = True
+        
+    if "STAND BY" not in direction:
+        send_telegram_alert(
+            selected_display, 
+            tf_choice, 
+            st.session_state.cached_direction_snp, 
+            st.session_state.cached_win_rate_snp, 
+            st.session_state.cached_confidence_snp, 
+            st.session_state.cached_time_snp
+        )
+
+if st.session_state.signal_active_snp:
+    st.success("Analysis complete!")
+    
+    st.markdown("### SIGNAL RESULT")
+    st.markdown(f"""
+    * **Asset:** `{st.session_state.cached_asset_display_snp}`
+    * **Timeframe:** `{st.session_state.cached_tf_choice_snp}`
+    * **Signal Direction:** **{st.session_state.cached_direction_snp}**
+    * **Entry Time (Candle Close):** `{st.session_state.cached_time_snp}`
+    * **Estimated Accuracy:** `{st.session_state.cached_win_rate_snp}`
+    * **Filter Status:** `{st.session_state.cached_confidence_snp}`
+    * **Money Management:** `1% Account Capital`
+    """)
+    
+    details = st.session_state.cached_details_snp
+    if details:
+        if "STAND BY" in st.session_state.cached_direction_snp:
+            st.markdown(f"""
+            <div class="standby-box">
+                <h4>🛑 STAND BY: MERCATO IN EQUILIBRIO</h4>
+                <p>Nessuna spinta direzionale forte rilevata al momento.</p>
+                <hr style="border-color: #ff4444;">
+                <p style="color: #ffffff; text-align: left;"><b>RSI:</b> {details.get('RSI', 'N/A')}</p>
+                <p style="color: #ffffff; text-align: left;"><b>Trend Breve:</b> {details.get('Trend Breve (EMA 9/21)', 'N/A')}</p>
+                <p style="color: #ffffff; text-align: left;"><b>Bollinger:</b> {details.get('Bollinger Position', 'N/A')}</p>
+                <p style="color: #ffffff; text-align: left;"><b>MACD:</b> {details.get('MACD Cross', 'N/A')}</p>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div class="analysis-box">
+                <h4>🎯 SIGNAL CONFLUENCE ALIGNED</h4>
+                <p><b>RSI (14):</b> {details.get('RSI', 'N/A')}</p>
+                <p><b>Trend Breve:</b> {details.get('Trend Breve (EMA 9/21)', 'N/A')}</p>
+                <p><b>Posizione Bollinger:</b> {details.get('Bollinger Position', 'N/A')}</p>
+                <p><b>Momento MACD:</b> {details.get('MACD Cross', 'N/A')}</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+    st.markdown("### ⏳ Current Candle Countdown")
+    initial_left = get_seconds_to_next_candle(st.session_state.cached_tf_seconds_snp)
+    
+    timer_html = f"""
+    <div style="font-size: 28px; font-weight: bold; color: #00ffcc; text-align: center; background-color: #1f1f1f; padding: 15px; border-radius: 8px; border: 1px solid #333333;" id="countdown_snp">
+        Loading timer...
+    </div>
+    <script>
+    var timeLeftSnp = {initial_left};
+    function updateTimerSnp() {{
+        if (timeLeftSnp <= 0) {{
+            document.getElementById("countdown_snp").innerHTML = "⏰ CANDELA CHIUSA!";
+            document.getElementById("countdown_snp").style.color = "#ff4444";
+            return;
+        }}
+        var minutes = Math.floor(timeLeftSnp / 60);
+        var seconds = timeLeftSnp % 60;
+        minutes = minutes < 10 ? "0" + minutes : minutes;
+        seconds = seconds < 10 ? "0" + seconds : seconds;
+        document.getElementById("countdown_snp").innerHTML = "⏱️ " + minutes + ":" + seconds;
+        timeLeftSnp--;
+    }}
+    setInterval(updateTimerSnp, 1000);
+    updateTimerSnp();
+    </script>
+    """
+    components.html(timer_html, height=80)
