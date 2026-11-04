@@ -1,29 +1,22 @@
-import time
+import asyncio
+import json
 import pandas as pd
 import numpy as np
 import yfinance as yf
+import websockets
 
 # ==========================================
-# CONFIGURAZIONE BOT (STANDARD / BALANCED)
+# CONFIGURAZIONE GENERALE
 # ==========================================
-# Puoi cambiare la coppia Forex in base alle tue preferenze
-SYMBOL = "EURUSD=X" 
-INTERVAL = "1m"     # Intervallo delle candele (1 minuto)
+SSID = "INSERISCI_QUI_IL_TUO_SSID_DEL_BROWSER"
+WEBSOCKET_URL = "wss://api.pocketoption.com/socket.io/?EIO=4&transport=websocket"
 
-def fetch_data(symbol):
-    """Scarica i dati reali da yfinance"""
-    df = yf.download(symbol, period="1d", interval=INTERVAL, progress=False)
-    if df.empty:
-        return None
-    # Pulisce eventuali multi-indice di yfinance
-    if isinstance(df.columns, pd.MultiIndex):
-        df.columns = df.columns.get_level_values(0)
-    return df
-
+# ==========================================
+# MOTORE DI INDICATORI COMUNE (Stessa logica)
+# ==========================================
 def calculate_indicators(df):
-    """Calcola la logica tecnica: RSI, EMA, Bollinger, MACD"""
     if len(df) < 30:
-        return None, "Dati insufficienti"
+        return None, "Dati insufficienti per il calcolo"
     
     # 1. EMA 9 e 21
     df['EMA_9'] = df['close'].ewm(span=9, adjust=False).mean()
@@ -65,7 +58,7 @@ def calculate_indicators(df):
             reason = "RSI ipercomprato, prezzo sopra la Bollinger superiore, EMA ribassista e MACD favorevole."
             
     return {
-        "time": str(df.index[-1]),
+        "time": str(last.get('time', 'Live')),
         "close": round(float(last['close']), 5),
         "rsi": round(float(last['RSI']), 2),
         "macd": round(float(last['MACD']), 5),
@@ -73,30 +66,90 @@ def calculate_indicators(df):
         "reason": reason
     }, None
 
-def main():
-    print(f"=== AVVIO BOT FOREX (app.py) su {SYMBOL} ===")
-    print("Monitoraggio attivo dei dati reali. Premi Ctrl+C per uscire.\n")
+# ==========================================
+# MODULO 1: ANALISI FOREX REALE (yfinance)
+# ==========================================
+def run_forex_analysis(symbol="EURUSD=X", interval="1m"):
+    print(f"\n[FOREX] Avvio analisi in corso per {symbol}...")
+    df = yf.download(symbol, period="5d", interval=interval, progress=False)
+    if df.empty:
+        print("[ERRORE] Nessun dato ricevuto da yfinance.")
+        return
     
-    while True:
-        try:
-            df = fetch_data(SYMBOL)
-            if df is not None:
-                analysis, err = calculate_indicators(df)
-                if analysis:
-                    print(f"[{analysis['time']}] Prezzo: {analysis['close']} | RSI: {analysis['rsi']}")
-                    print(f"-> Segnale: {analysis['signal']}")
-                    print(f"   Motivo: {analysis['reason']}")
-                    print("-" * 60)
-            
-            # Attende 60 secondi prima della candela successiva
-            time.sleep(60)
-            
-        except KeyboardInterrupt:
-            print("\n[STOP] Bot interrotto manualmente.")
-            break
-        except Exception as e:
-            print(f"[ERRORE] {e}")
-            time.sleep(10)
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = df.columns.get_level_values(0)
+        
+    analysis, err = calculate_indicators(df)
+    if analysis:
+        print(f"[{analysis['time']}] Prezzo: {analysis['close']} | RSI: {analysis['rsi']}")
+        print(f"-> Segnale: {analysis['signal']}\n   Motivo: {analysis['reason']}\n" + "-"*50)
 
+# ==========================================
+# MODULO 2: ANALISI OTC (WebSocket)
+# ==========================================
+async def run_otc_analysis(asset_target="EURUSD_otc"):
+    candles_df = pd.DataFrame(columns=['time', 'open', 'high', 'low', 'close', 'volume'])
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Origin": "https://pocketoption.com"
+    }
+    
+    print(f"\n[OTC] Connessione al flusso WebSocket per l'asset: {asset_target}...")
+    try:
+        async with websockets.connect(WEBSOCKET_URL, extra_headers=headers) as ws:
+            await ws.send('40')
+            await ws.send(f'42["auth", {{"session": "{SSID}", "isDemo": 1}}]')
+            await ws.send(f'42["changeSymbol", "{asset_target}"]')
+            print(f"[SUCCESSO] Connesso a {asset_target}! In ascolto dei dati in tempo reale...\n")
+            
+            while True:
+                response = await ws.recv()
+                if response == "2":
+                    await ws.send("3")
+                    continue
+                
+                if response.startswith("42"):
+                    data = json.loads(response[2:])
+                    event_type = data[0]
+                    payload = data[1]
+                    
+                    if event_type in ["updateStream", "candleHistory"]:
+                        if isinstance(payload, list):
+                            candles_df = pd.DataFrame(payload)
+                        elif isinstance(payload, dict) and 'close' in payload:
+                            new_row = pd.DataFrame([payload])
+                            candles_df = pd.concat([candles_df, new_row], ignore_index=True)
+                            
+                        analysis, err = calculate_indicators(candles_df)
+                        if analysis:
+                            print(f"[OTC Live] Prezzo: {analysis['close']} | RSI: {analysis['rsi']}")
+                            print(f"-> Segnale: {analysis['signal']}\n   Motivo: {analysis['reason']}\n" + "-"*50)
+                            
+    except websockets.exceptions.ConnectionClosedError:
+        print("[ERRORE] Connessione WebSocket chiusa dal server. Verifica che l'SSID sia corretto.")
+    except Exception as e:
+        print(f"[ERRORE WEBSOCKET] {e}")
+
+# ==========================================
+# MENU PRINCIPALE DEL BOT UNIFICATO
+# ==========================================
 if __name__ == "__main__":
-    main()
+    print("==========================================")
+    print("   BOT UNIFICATO: FOREX & OTC ANALYZER")
+    print("==========================================")
+    print("1. Analizza Forex Reale (es. EURUSD=X)")
+    print("2. Avvia Monitoraggio WebSocket OTC in tempo reale")
+    
+    scelta = input("\nSeleziona la modalità (1 o 2): ").strip()
+    
+    if scelta == "1":
+        simbolo = input("Inserisci il simbolo Forex (default EURUSD=X): ").strip() or "EURUSD=X"
+        run_forex_analysis(simbolo)
+    elif scelta == "2":
+        asset = input("Inserisci l'asset OTC (default EURUSD_otc): ").strip() or "EURUSD_otc"
+        try:
+            asyncio.run(run_otc_analysis(asset))
+        except KeyboardInterrupt:
+            print("\n[STOP] Monitoraggio OTC interrotto manualmente.")
+    else:
+        print("[ERRORE] Scelta non valida. Riavvia lo script.")
