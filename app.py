@@ -6,7 +6,7 @@ import yfinance as yf
 import websockets
 
 # ==========================================
-# CONFIGURAZIONE GENERALE BOT UNIFICATO
+# CONFIGURAZIONE GENERALE
 # ==========================================
 SSID = "INSERISCI_QUI_IL_TUO_SSID_DEL_BROWSER"
 WEBSOCKET_URL = "wss://api.pocketoption.com/socket.io/?EIO=4&transport=websocket"
@@ -67,28 +67,27 @@ def calculate_indicators(df):
     }, None
 
 # ==========================================
-# MODULO 1: ANALISI FOREX REALE (yfinance)
+# ANALISI FOREX REALE (yfinance)
 # ==========================================
-def analyze_forex(symbol="EURUSD=X", interval="1m"):
+def run_forex_analysis(symbol="EURUSD=X", interval="1m"):
     print(f"\n[FOREX] Analisi in corso per {symbol}...")
     df = yf.download(symbol, period="1d", interval=interval, progress=False)
     if df.empty:
-        print("[errore] Nessun dato ricevuto da yfinance.")
+        print("[ERRORE] Nessun dato ricevuto da yfinance.")
         return
     
-    # Pulizia colonne multi-indice di yfinance se presenti
     if isinstance(df.columns, pd.MultiIndex):
         df.columns = df.columns.get_level_values(0)
         
     analysis, err = calculate_indicators(df)
     if analysis:
         print(f"Prezzo: {analysis['close']} | RSI: {analysis['rsi']}")
-        print(f"-> Segnale: {analysis['signal']} | Motivo: {analysis['reason']}\n" + "-"*50)
+        print(f"-> Segnale: {analysis['signal']}\nMotivo: {analysis['reason']}\n" + "-"*50)
 
 # ==========================================
-# MODULO 2: ANALISI OTC (WebSocket)
+# ANALISI OTC (WebSocket)
 # ==========================================
-async def analyze_otc(asset_target="EURUSD_otc"):
+async def run_otc_analysis(asset_target="EURUSD_otc"):
     candles_df = pd.DataFrame(columns=['time', 'open', 'high', 'low', 'close', 'volume'])
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -123,27 +122,29 @@ async def analyze_otc(asset_target="EURUSD_otc"):
                             
                         analysis, err = calculate_indicators(candles_df)
                         if analysis:
-                            print(f"[OTC Feed] Prezzo: {analysis['close']} | RSI: {analysis['rsi']}")
-                            print(f"-> Segnale: {analysis['signal']} | Motivo: {analysis['reason']}\n" + "-"*50)
+                            print(f"[OTC Live] Prezzo: {analysis['close']} | RSI: {analysis['rsi']}")
+                            print(f"-> Segnale: {analysis['signal']}\nMotivo: {analysis['reason']}\n" + "-"*50)
                             
     except Exception as e:
         print(f"[ERRORE WEBSOCKET] {e}")
 
 # ==========================================
-# MENU PRINCIPALE DEL BOT
+# INTERFACCIA DI SCELTA NEL BOT UNICO
 # ==========================================
 if __name__ == "__main__":
-    print("=== BOT UNIFICATO FOREX & OTC ===")
+    print("==========================================")
+    print("   BOT UNIFICATO: FOREX & OTC ANALYZER")
+    print("==========================================")
     print("1. Analizza Forex Reale (es. EURUSD=X)")
-    print("2. Avvia Monitoraggio WebSocket OTC (es. EURUSD_otc)")
+    print("2. Avvia Monitoraggio OTC in Tempo Reale")
     
-    scelta = input("\nScegli la modalità (1 o 2): ").strip()
+    scelta = input("\nSeleziona la modalità (1 o 2): ").strip()
     
     if scelta == "1":
-        symbol_input = input("Inserisci il simbolo Forex (default EURUSD=X): ").strip() or "EURUSD=X"
-        analyze_forex(symbol_input)
+        simbolo = input("Inserisci il simbolo Forex (default EURUSD=X): ").strip() or "EURUSD=X"
+        run_forex_analysis(simbolo)
     elif scelta == "2":
-        asset_input = input("Inserisci l'asset OTC (default EURUSD_otc): ").strip() or "EURUSD_otc"
-        asyncio.run(analyze_otc(asset_input))
+        asset = input("Inserisci l'asset OTC (default EURUSD_otc): ").strip() or "EURUSD_otc"
+        asyncio.run(run_otc_analysis(asset))
     else:
-        print("Scelta non valida.") 
+        print("[ERRORE] Scelta non valida.")
