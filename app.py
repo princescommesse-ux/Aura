@@ -2,9 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import yfinance as yf
-import asyncio
-import websockets
-import json
 
 # Configurazione della pagina Streamlit
 st.set_page_config(page_title="Bot Analisi Forex & OTC", layout="centered")
@@ -16,8 +13,17 @@ st.write("Analisi automatica con RSI, EMA, Bande di Bollinger e MACD.")
 st.sidebar.header("Configurazione")
 modalita = st.sidebar.selectbox("Seleziona Mercato", ["Forex Reale (yfinance)", "OTC WebSocket"])
 
-# Funzione comune di calcolo indicatori
+# Funzione comune di calcolo indicatori (corretta per le maiuscole di yfinance)
 def calculate_indicators(df):
+    # Pulisce eventuali multi-indice e normalizza i nomi delle colonne in minuscolo
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = df.columns.get_level_values(0)
+    
+    df.columns = [str(col).lower() for col in df.columns]
+    
+    if 'close' not in df.columns:
+        return None, f"Colonna 'close' non trovata. Colonne disponibili: {list(df.columns)}"
+        
     if len(df) < 30:
         return None, "Dati insufficienti per il calcolo (< 30 candele)"
     
@@ -74,32 +80,22 @@ if modalita == "Forex Reale (yfinance)":
             if df.empty:
                 st.error("Nessun dato ricevuto da yfinance.")
             else:
-                if isinstance(df.columns, pd.MultiIndex):
-                    df.columns = df.columns.get_level_values(0)
-                
                 analysis, err = calculate_indicators(df)
                 if analysis:
                     st.success("Analisi completata!")
                     st.metric(label="Prezzo Attuale", value=analysis['close'])
                     st.metric(label="RSI (14)", value=analysis['rsi'])
-                    
-                    if "BUY" in analysis['signal']:
-                        st.markdown(f"### Segnale: {analysis['signal']}")
-                    elif "SELL" in analysis['signal']:
-                        st.markdown(f"### Segnale: {analysis['signal']}")
-                    else:
-                        st.markdown(f"### Segnale: {analysis['signal']}")
-                        
+                    st.markdown(f"### Segnale: {analysis['signal']}")
                     st.info(f"**Motivo:** {analysis['reason']}")
                 else:
                     st.warning(err)
 
 # ==================== MODALITA OTC ====================
 elif modalita == "OTC WebSocket":
-    st.sidebar.warning("Nota: I WebSocket OTC sui server cloud (come Streamlit) potrebbero subire restrizioni IP da parte dei broker.")
+    st.sidebar.warning("Nota: I WebSocket OTC sui server cloud (come Streamlit) potrebbero subire restrizioni IP.")
     ssid_input = st.sidebar.text_input("Inserisci il tuo SSID", type="password")
     asset_otc = st.sidebar.selectbox("Asset OTC", ["EURUSD_otc", "GBPUSD_otc", "Bitcoin_otc", "Ethereum_otc"])
     
     st.write(f"Asset selezionato per i test WebSocket: **{asset_otc}**")
-    st.write("Usa il pannello laterale per inserire l'SSID e avviare il monitoraggio.")
+
 
