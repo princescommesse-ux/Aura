@@ -34,12 +34,14 @@ OTC_VALUTE_LIST = [
     "🇯🇵🇿🇦 ZAR/JPY OTC", "🇸🇪🇳🇴 NOK/SEK OTC", "🇯🇵🇵🇱 PLN/JPY OTC", "🇯🇵🇭🇺 HUF/JPY OTC", "🇯🇵🇨🇿 CZK/JPY OTC"
 ]
 
-# --- PANNELLO DI CONFIGURAZIONE ---
-st.sidebar.header("⚙️ Impostazioni")
-mercato_tipo = st.sidebar.radio("Mercato:", ["Forex Reale (20 coppie)", "Asset OTC Valute (60+)"])
-# Timeframe richiesti: solo 5m, 10m, 15m
-timeframe = st.sidebar.selectbox("⏱️ Timeframe:", ["5m", "10m", "15m"], index=0)
-auto_refresh = st.sidebar.checkbox("Abilita Countdown / Auto-Refresh", value=False)
+# --- CONTROLLI PRINCIPALI SULLO SCHERMO ---
+col_mercato, col_tf = st.columns([2, 1])
+
+with col_mercato:
+    mercato_tipo = st.radio("Seleziona Mercato:", ["Forex Reale (20 coppie)", "Asset OTC Valute (60+)"])
+
+with col_tf:
+    timeframe = st.selectbox("⏱️ Timeframe:", ["5m", "10m", "15m"], index=0)
 
 symbol_to_fetch = "EURUSD=X"
 display_name = "EUR/USD"
@@ -51,7 +53,10 @@ if mercato_tipo == "Forex Reale (20 coppie)":
 else:
     asset_scelta = st.selectbox("Scegli l'asset OTC di valuta:", OTC_VALUTE_LIST)
     display_name = asset_scelta
-    base_clean = asset_scelta.split(" ")[1].replace("/", "")
+    
+    # Pulizia del simbolo per la mappatura intelligente
+    parti = asset_scelta.split(" ")
+    base_clean = parti[1].replace("/", "") if len(parti) > 1 else "EURUSD"
     symbol_to_fetch = f"{base_clean}=X"
     if base_clean not in ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "NZDUSD", "USDCHF", "EURGBP", "EURJPY", "GBPJPY"]:
         symbol_to_fetch = "EURUSD=X"
@@ -113,8 +118,7 @@ def calculate_indicators(df):
 # Esecuzione Analisi
 st.markdown("---")
 if st.button("🚀 Avvia Analisi di Mercato", type="primary"):
-    with st.spinner(f"Scaricamento e adattamento dati ({timeframe}) per {display_name}..."):
-        # Scarichiamo a 1m per poter ricampionare in modo pulito anche a 10m
+    with st.spinner(f"Scaricamento dati ({timeframe}) per {display_name}..."):
         df = yf.download(symbol_to_fetch, period="5d", interval="1m", progress=False)
         
         if df.empty:
@@ -140,7 +144,6 @@ if st.button("🚀 Avvia Analisi di Mercato", type="primary"):
             if analysis:
                 st.success(f"Analisi completata per {display_name} [{timeframe}]!")
                 
-                # Metriche principali
                 col1, col2, col3 = st.columns(3)
                 col1.metric("Prezzo", analysis['close'])
                 col2.metric("RSI (14)", analysis['rsi'])
@@ -151,11 +154,3 @@ if st.button("🚀 Avvia Analisi di Mercato", type="primary"):
             else:
                 st.warning(err)
 
-# Gestione Countdown / Auto-Refresh visivo
-if auto_refresh:
-    st.markdown("---")
-    placeholder = st.empty()
-    for seconds in range(60, 0, -1):
-        placeholder.markdown(f"⏳ **Prossimo aggiornamento automatico tra:** `{seconds} secondi`")
-        time.sleep(1)
-    st.rerun()
