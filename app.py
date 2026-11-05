@@ -129,7 +129,7 @@ with col_risk:
     risk_pct = st.slider("Rischio per Operazione (%)", min_value=0.5, max_value=5.0, value=1.0, step=0.5)
 
 calculated_stake = round(account_balance * (risk_pct / 100.0), 2)
-st.info(f"💰 **StakeConsigliata (Money Management):** ${calculated_stake} ({risk_pct}% del capitale)")
+st.info(f"💰 **Stake Consigliata (Money Management):** ${calculated_stake} ({risk_pct}% del capitale)")
 
 def get_seconds_to_next_candle(seconds):
     now = datetime.now()
@@ -413,4 +413,4 @@ if st.session_state.signal_active_snp:
         var timeLeftSnp = {initial_left};
         function updateTimerSnp() {{
             if (timeLeftSnp <= 0) {{
-                
+                            
