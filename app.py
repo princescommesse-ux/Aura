@@ -116,9 +116,13 @@ def get_next_candle_time(seconds):
     now = datetime.now()
     secs_left = get_seconds_to_next_candle(seconds)
     target_time = now + timedelta(seconds=secs_left)
-    # Arrotondamento pulito al secondo esatto
-    target_time = target_time.replace(microsecond=0)
-    return target_time.strftime("%H:%M:%S")
+    
+    # ARROTONDAMENTO UNIFORME AL SECONDO MULTIPLO ESATTO (es. se M5, i secondi saranno sempre :00)
+    total_epoch_secs = int(target_time.timestamp())
+    aligned_epoch_secs = total_epoch_secs - (total_epoch_secs % seconds)
+    aligned_time = datetime.fromtimestamp(aligned_epoch_secs)
+    
+    return aligned_time.strftime("%H:%M:%S")
 
 def ultimate_institutional_analysis(ticker, timeframe_choice, tf_sec):
     try:
