@@ -27,9 +27,9 @@ st.markdown(
 
 st.title("⚡ AURA PRO ⚡")
 
-mercato_tipo = st.radio("Seleziona Modalità:", ["🚀 Scanner Globale (Precisione Live)", "Forex Reale (20 coppie)", "Asset OTC Valute (Reali)", "Crypto OTC (Top 3)"], horizontal=True)
+mercato_tipo = st.radio("Seleziona Modalità:", ["🚀 Scanner Globale", "Forex Reale", "Asset OTC Valute", "Crypto OTC"], horizontal=True)
 
-# 20 coppie Forex Reali ufficiali
+# Coppie Forex Reali (senza USD/SEK)
 forex_dict = {
     "🇪🇺🇺🇸 EUR/USD": {"symbol": "EURUSD=X"},
     "🇬🇧🇺🇸 GBP/USD": {"symbol": "GBPUSD=X"},
@@ -49,8 +49,7 @@ forex_dict = {
     "🇦🇺🇨🇦 AUD/CAD": {"symbol": "AUDCAD=X"},
     "🇪🇺🇨🇭 EUR/CHF": {"symbol": "EURCHF=X"},
     "🇬🇧🇨🇭 GBP/CHF": {"symbol": "GBPCHF=X"},
-    "🇨🇭🇯🇵 CHF/JPY": {"symbol": "CHFJPY=X"},
-    "🇸🇪🇺🇸 USD/SEK": {"symbol": "USDSEK=X"}
+    "🇨🇭🇯🇵 CHF/JPY": {"symbol": "CHFJPY=X"}
 }
 
 # Solo coppie OTC Valute con corrispettivo reale e diretto su Yahoo Finance
@@ -76,18 +75,18 @@ otc_dict = {
     "🇳🇿🇺🇸 NZD/USD OTC": {"symbol": "NZDUSD=X"}
 }
 
-# Crypto OTC blindate (Top 3)
+# Crypto OTC
 crypto_otc_dict = {
     "₿ Bitcoin OTC": {"symbol": "BTC-USD"},
     "Ξ Ethereum OTC": {"symbol": "ETH-USD"},
     "☀️ Solana OTC": {"symbol": "SOL-USD"}
 }
 
-if mercato_tipo != "🚀 Scanner Globale (Precisione Live)":
-    if mercato_tipo == "Forex Reale (20 coppie)":
+if mercato_tipo != "🚀 Scanner Globale":
+    if mercato_tipo == "Forex Reale":
         selected_display = st.selectbox("Select Currency Pair", list(forex_dict.keys()), key="snp_asset_forex")
         selected_asset = forex_dict[selected_display]["symbol"]
-    elif mercato_tipo == "Asset OTC Valute (Reali)":
+    elif mercato_tipo == "Asset OTC Valute":
         selected_display = st.selectbox("Select OTC Asset", list(otc_dict.keys()), key="snp_asset_otc")
         selected_asset = otc_dict[selected_display]["symbol"]
     else:
@@ -237,7 +236,7 @@ if "cached_confidence_snp" not in st.session_state: st.session_state.cached_conf
 if "cached_details_snp" not in st.session_state: st.session_state.cached_details_snp = {}
 
 if st.button("🚀 RUN SCANNER / ANALYSIS"):
-    if mercato_tipo == "🚀 Scanner Globale (Precisione Live)":
+    if mercato_tipo == "🚀 Scanner Globale":
         st.session_state.scanner_results = []
         combined_dict = {**forex_dict, **otc_dict}
         
@@ -286,7 +285,7 @@ if st.button("🚀 RUN SCANNER / ANALYSIS"):
             )
 
 if st.session_state.signal_active_snp:
-    if mercato_tipo == "🚀 Scanner Globale (Precisione Live)":
+    if mercato_tipo == "🚀 Scanner Globale":
         st.success("Scanner completato!")
         st.markdown("### 🎯 VALUTE CON SEGNALE ATTIVO")
         if len(st.session_state.scanner_results) > 0:
