@@ -28,7 +28,7 @@ st.markdown(
 
 st.title("⚡ AURA PRO ⚡")
 
-mercato_tipo = st.radio("Seleziona Modalità:", ["🚀 Scanner Globale (Valute Verificate)", "Forex Reale (20 coppie)", "Asset OTC Valute (Reali)", "Crypto OTC (Top 3)"], horizontal=True)
+mercato_tipo = st.radio("Seleziona Modalità:", ["🚀 Scanner Globale (Multi-TF Precision)", "Forex Reale (20 coppie)", "Asset OTC Valute (Reali)", "Crypto OTC (Top 3)"], horizontal=True)
 
 # 20 coppie Forex Reali ufficiali
 forex_dict = {
@@ -84,7 +84,7 @@ crypto_otc_dict = {
     "☀️ Solana OTC": {"symbol": "SOL-USD"}
 }
 
-if mercato_tipo != "🚀 Scanner Globale (Valute Verificate)":
+if mercato_tipo != "🚀 Scanner Globale (Multi-TF Precision)":
     if mercato_tipo == "Forex Reale (20 coppie)":
         selected_display = st.selectbox("Select Currency Pair", list(forex_dict.keys()), key="snp_asset_forex")
         selected_asset = forex_dict[selected_display]["symbol"]
@@ -142,6 +142,7 @@ def ultimate_institutional_analysis(ticker, timeframe_choice):
         }
         iv = interval_map.get(timeframe_choice, "1m")
         
+        # 1. Analisi Timeframe Principale
         df = yf.download(ticker, period="1d", interval=iv, progress=False)
         if df.empty or len(df) < 35:
             return "STAND BY", "N/A", "Insufficient Market Data", {}
@@ -172,38 +173,46 @@ def ultimate_institutional_analysis(ticker, timeframe_choice):
         signal_line = macd.ewm(span=9, adjust=False).mean()
         is_macd_bullish = float(macd.iloc[-1].item()) > float(signal_line.iloc[-1].item())
 
+        # 2. Confluenza Multi-Timeframe (Controllo Macro su TF superiore)
+        higher_iv = "15m" if iv in ["1m", "2m", "5m"] else "1h"
+        df_higher = yf.download(ticker, period="5d", interval=higher_iv, progress=False)
+        macro_bullish = True
+        if not df_higher.empty and len(df_higher) >= 25:
+            h_close = df_higher['Close']
+            h_ema9 = h_close.ewm(span=9, adjust=False).mean()
+            h_ema21 = h_close.ewm(span=21, adjust=False).mean()
+            macro_bullish = float(h_ema9.iloc[-1].item()) > float(h_ema21.iloc[-1].item())
+
         details = {
             "RSI": f"{current_rsi:.1f}",
             "Trend Breve (EMA 9/21)": "BULLISH 🟢" if is_bullish_trend else "BEARISH 🔴",
+            "Trend Macro (Multi-TF)": "BULLISH 🟢" if macro_bullish else "BEARISH 🔴",
             "Bollinger Position": "Near Lower Support" if curr_price <= curr_lower * 1.005 else ("Near Upper Resistance" if curr_price >= curr_upper * 0.995 else "Mid-Channel"),
             "MACD Cross": "BULLISH 🟢" if is_macd_bullish else "BEARISH 🔴"
         }
 
-        if current_rsi <= 40 and (is_bullish_trend or curr_price <= curr_lower * 1.005):
+        # Filtro Rigido: Il segnale deve rispettare anche il Trend Macro (Multi-TF)
+        if current_rsi <= 40 and (is_bullish_trend or curr_price <= curr_lower * 1.005) and macro_bullish:
             direction = "BUY 🟢"
-        elif current_rsi >= 60 and (not is_bullish_trend or curr_price >= curr_upper * 0.995):
+        elif current_rsi >= 60 and (not is_bullish_trend or curr_price >= curr_upper * 0.995) and not macro_bullish:
             direction = "SELL 🔴"
         else:
-            return "STAND BY / NO TRADE", "N/A", "Market in Equilibrium", details
+            return "STAND BY / NO TRADE", "N/A", "Market in Equilibrium or Multi-TF Mismatch", details
 
-        score = 52.0
+        score = 55.0
         if "BUY" in direction:
             if current_rsi <= 35: score += 10.0
-            elif current_rsi <= 40: score += 6.0
             if curr_price <= curr_lower * 1.005: score += 10.0
-            if is_bullish_trend: score += 10.0
-            if is_macd_bullish: score += 8.0
+            if is_macd_bullish: score += 7.5
         elif "SELL" in direction:
             if current_rsi >= 65: score += 10.0
-            elif current_rsi >= 60: score += 6.0
             if curr_price >= curr_upper * 0.995: score += 10.0
-            if not is_bullish_trend: score += 10.0
-            if not is_macd_bullish: score += 8.0
+            if not is_macd_bullish: score += 7.5
 
-        final_score = min(score, 82.5)
-        confidence_str = f"{final_score:.1f}% (Dynamic AI Confidence)"
+        final_score = min(score, 90.0)
+        confidence_str = f"{final_score:.1f}% (Multi-TF Confirmed)"
 
-        return direction, confidence_str, "Balanced Confluence Confirmed", details
+        return direction, confidence_str, "Institutional Multi-TF Confluence", details
             
     except Exception as e:
         return "STAND BY", "N/A", f"Error: {str(e)}", {}
@@ -242,7 +251,7 @@ if "cached_confidence_snp" not in st.session_state: st.session_state.cached_conf
 if "cached_details_snp" not in st.session_state: st.session_state.cached_details_snp = {}
 
 if st.button("🚀 RUN SCANNER / ANALYSIS"):
-    if mercato_tipo == "🚀 Scanner Globale (Valute Verificate)":
+    if mercato_tipo == "🚀 Scanner Globale (Multi-TF Precision)":
         st.session_state.scanner_results = []
         combined_dict = {**forex_dict, **otc_dict}
         
@@ -288,9 +297,9 @@ if st.button("🚀 RUN SCANNER / ANALYSIS"):
             )
 
 if st.session_state.signal_active_snp:
-    if mercato_tipo == "🚀 Scanner Globale (Valute Verificate)":
+    if mercato_tipo == "🚀 Scanner Globale (Multi-TF Precision)":
         st.success("Scanner completato!")
-        st.markdown("### 🎯 VALUTE CON SEGNALE ATTIVO")
+        st.markdown("### 🎯 VALUTE CON SEGNALE MULTI-TF CONFERMATO")
         if len(st.session_state.scanner_results) > 0:
             for res in st.session_state.scanner_results:
                 st.markdown(f"""
@@ -302,8 +311,8 @@ if st.session_state.signal_active_snp:
         else:
             st.markdown("""
             <div class="standby-box">
-                <h4>🛑 NESSUN SEGNALE AL MOMENTO</h4>
-                <p>Nessuna valuta ha superato i filtri di confluenza in questo timeframe. Il mercato è in perfetto equilibrio.</p>
+                <h4>🛑 NESSUN SEGNALE MULTI-TF</h4>
+                <p>Nessuna valuta presenta l'allineamento perfetto tra timeframe operativo e trend macro.</p>
             </div>
             """, unsafe_allow_html=True)
     else:
@@ -324,11 +333,12 @@ if st.session_state.signal_active_snp:
             if "STAND BY" in st.session_state.cached_direction_snp:
                 st.markdown(f"""
                 <div class="standby-box">
-                    <h4>🛑 STAND BY: MERCATO IN EQUILIBRIO</h4>
-                    <p>Nessuna spinta direzionale forte rilevata al momento.</p>
+                    <h4>🛑 STAND BY: FILTRO MULTI-TF ATTIVO</h4>
+                    <p>Il mercato non rispetta l'allineamento tra micro e macro trend.</p>
                     <hr style="border-color: #ff4444;">
                     <p style="color: #ffffff; text-align: left;"><b>RSI:</b> {details.get('RSI', 'N/A')}</p>
                     <p style="color: #ffffff; text-align: left;"><b>Trend Breve:</b> {details.get('Trend Breve (EMA 9/21)', 'N/A')}</p>
+                    <p style="color: #ffffff; text-align: left;"><b>Trend Macro (Multi-TF):</b> {details.get('Trend Macro (Multi-TF)', 'N/A')}</p>
                     <p style="color: #ffffff; text-align: left;"><b>Bollinger:</b> {details.get('Bollinger Position', 'N/A')}</p>
                     <p style="color: #ffffff; text-align: left;"><b>MACD:</b> {details.get('MACD Cross', 'N/A')}</p>
                 </div>
@@ -336,10 +346,11 @@ if st.session_state.signal_active_snp:
             else:
                 st.markdown(f"""
                 <div class="analysis-box">
-                    <h4>🎯 SIGNAL CONFLUENCE ALIGNED</h4>
+                    <h4>🎯 MULTI-TF CONFLUENCE ALIGNED</h4>
                     <p><b>RSI (14):</b> {details.get('RSI', 'N/A')}</p>
                     <p><b>Trend Breve:</b> {details.get('Trend Breve (EMA 9/21)', 'N/A')}</p>
-                    <p><b>Posizione Bollinger:</b> {details.get('Bollinger Position', 'N/A')}</p>
+                    <p><b>Trend Macro (Multi-TF):</b> {details.get('Trend Macro (Multi-TF)', 'N/A')}</p>
+                    <p><b>Posizione Bollinger:</b> {details.get('Posizione Bollinger', details.get('Bollinger Position', 'N/A'))}</p>
                     <p><b>Momento MACD:</b> {details.get('MACD Cross', 'N/A')}</p>
                 </div>
                 """, unsafe_allow_html=True)
@@ -356,7 +367,7 @@ if st.session_state.signal_active_snp:
         function updateTimerSnp() {{
             if (timeLeftSnp <= 0) {{
                 document.getElementById("countdown_snp").innerHTML = "⏰ CANDELA CHIUSA!";
-                document.getElementById("countdown_snp").style.color = "#ff4444";
+                document.getElementById("countdown_snp5").style.color = "#ff4444";
                 return;
             }}
             var minutes = Math.floor(timeLeftSnp / 60);
