@@ -7,7 +7,7 @@ import yfinance as yf
 
 # Page configuration
 st.set_page_config(
-    page_title="Aura Pro", 
+    page_title="Aura", 
     page_icon="⚡", 
     layout="centered"
 )
@@ -26,11 +26,11 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("⚡ AURA PRO ⚡")
+st.title("⚡ AURA ⚡")
 
 mercato_tipo = st.radio("Seleziona Modalità:", ["🚀 Scanner Globale", "Forex Reale", "Asset OTC Valute", "Crypto OTC"], horizontal=True)
 
-# 19 coppie Forex Reali (senza USD/SEK)
+# Coppie Forex Reali (Senza NZD/USD)
 forex_dict = {
     "🇪🇺🇺🇸 EUR/USD": {"symbol": "EURUSD=X"},
     "🇬🇧🇺🇸 GBP/USD": {"symbol": "GBPUSD=X"},
@@ -38,7 +38,6 @@ forex_dict = {
     "🇦🇺🇺🇸 AUD/USD": {"symbol": "AUDUSD=X"},
     "🇺🇸🇨🇦 USD/CAD": {"symbol": "USDCAD=X"},
     "🇺🇸🇨🇭 USD/CHF": {"symbol": "USDCHF=X"},
-    "🇳🇿🇺🇸 NZD/USD": {"symbol": "NZDUSD=X"},
     "🇬🇧🇯🇵 GBP/JPY": {"symbol": "GBPJPY=X"},
     "🇪🇺🇯🇵 EUR/JPY": {"symbol": "EURJPY=X"},
     "🇪🇺🇬🇧 EUR/GBP": {"symbol": "EURGBP=X"},
@@ -53,7 +52,7 @@ forex_dict = {
     "🇨🇭🇯🇵 CHF/JPY": {"symbol": "CHFJPY=X"}
 }
 
-# Coppie OTC Valute con corrispettivo diretto su Yahoo Finance
+# Coppie OTC Valute (Incluso NZD/USD OTC)
 otc_dict = {
     "🇦🇺🇨🇭 AUD/CHF OTC": {"symbol": "AUDCHF=X"},
     "🇦🇺🇺🇸 AUD/USD OTC": {"symbol": "AUDUSD=X"},
@@ -71,9 +70,9 @@ otc_dict = {
     "🇬🇧🇦🇺 GBP/AUD OTC": {"symbol": "GBPAUD=X"},
     "🇺🇸🇯🇵 USD/JPY OTC": {"symbol": "USDJPY=X"},
     "🇳🇿🇯🇵 NZD/JPY OTC": {"symbol": "NZDJPY=X"},
+    "🇳🇿🇺🇸 NZD/USD OTC": {"symbol": "NZDUSD=X"},
     "🇨🇦🇨🇭 CAD/CHF OTC": {"symbol": "CADCHF=X"},
-    "🇦🇺🇨🇦 AUD/CAD OTC": {"symbol": "AUDCAD=X"},
-    "🇳🇿🇺🇸 NZD/USD OTC": {"symbol": "NZDUSD=X"}
+    "🇦🇺🇨🇦 AUD/CAD OTC": {"symbol": "AUDCAD=X"}
 }
 
 # Crypto OTC
@@ -225,7 +224,7 @@ def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence
     if bot_token == "INSERISCI_QUI_IL_TUO_BOT_TOKEN":
         return
     message = (
-        f"⚡ *AURA PRO SIGNAL* ⚡\n\n"
+        f"⚡ *AURA SIGNAL* ⚡\n\n"
         f"🔹 *Asset:* `{display_name}`\n"
         f"⏰ *Timeframe:* `{timeframe}`\n"
         f"🎯 *Direction:* *{direction}*\n"
