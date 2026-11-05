@@ -28,8 +28,8 @@ st.markdown(
 
 st.title("⚡ AURA PRO ⚡")
 
-# Selezione della Tipologia di Mercato (Aggiunta la modalità Scanner)
-mercato_tipo = st.radio("Seleziona Modalità:", ["🚀 Scanner Globale (Tutte le Valute)", "Forex Reale (20 coppie)", "Asset OTC Valute", "Crypto OTC (Top Fluidi)"], horizontal=True)
+# Selezione della Modalità di Mercato (Solo asset reali e verificati)
+mercato_tipo = st.radio("Seleziona Modalità:", ["🚀 Scanner Globale (Valute Verificate)", "Forex Reale (20 coppie)", "Asset OTC Valute", "Crypto OTC (Top 3)"], horizontal=True)
 
 # 20 coppie Forex Reali
 forex_dict = {
@@ -55,7 +55,7 @@ forex_dict = {
     "🇸🇪🇺🇸 USD/SEK": {"symbol": "USDSEK=X"}
 }
 
-# Lista ufficiale delle coppie OTC Valute da Pocket Option
+# Lista ufficiale delle coppie OTC Valute (mappate su feed Forex reali)
 otc_dict = {
     "🇦🇺🇨🇭 AUD/CHF OTC": {"symbol": "AUDCHF=X"},
     "🇦🇺🇳🇿 AUD/NZD OTC": {"symbol": "AUDUSD=X"},
@@ -116,16 +116,14 @@ otc_dict = {
     "🇴🇲🇨🇳 OMR/CNY OTC": {"symbol": "EURUSD=X"}
 }
 
-# Crypto OTC essenziali e super-fluidi
+# Crypto OTC blindate (solo le Top 3 a massima liquidità)
 crypto_otc_dict = {
     "₿ Bitcoin OTC": {"symbol": "BTC-USD"},
     "Ξ Ethereum OTC": {"symbol": "ETH-USD"},
-    "☀️ Solana OTC": {"symbol": "SOL-USD"},
-    "Ł Litecoin OTC": {"symbol": "LTC-USD"},
-    "🔗 Chainlink OTC": {"symbol": "LINK-USD"}
+    "☀️ Solana OTC": {"symbol": "SOL-USD"}
 }
 
-if mercato_tipo != "🚀 Scanner Globale (Tutte le Valute)":
+if mercato_tipo != "🚀 Scanner Globale (Valute Verificate)":
     if mercato_tipo == "Forex Reale (20 coppie)":
         selected_display = st.selectbox("Select Currency Pair", list(forex_dict.keys()), key="snp_asset_forex")
         selected_asset = forex_dict[selected_display]["symbol"]
@@ -283,9 +281,8 @@ if "cached_confidence_snp" not in st.session_state: st.session_state.cached_conf
 if "cached_details_snp" not in st.session_state: st.session_state.cached_details_snp = {}
 
 if st.button("🚀 RUN SCANNER / ANALYSIS"):
-    if mercato_tipo == "🚀 Scanner Globale (Tutte le Valute)":
+    if mercato_tipo == "🚀 Scanner Globale (Valute Verificate)":
         st.session_state.scanner_results = []
-        # Uniamo Forex Reale e OTC Valute per una scansione completa
         combined_dict = {**forex_dict, **otc_dict}
         
         progress_bar = st.progress(0)
@@ -330,7 +327,7 @@ if st.button("🚀 RUN SCANNER / ANALYSIS"):
             )
 
 if st.session_state.signal_active_snp:
-    if mercato_tipo == "🚀 Scanner Globale (Tutte le Valute)":
+    if mercato_tipo == "🚀 Scanner Globale (Valute Verificate)":
         st.success("Scanner completato!")
         st.markdown("### 🎯 VALUTE CON SEGNALE ATTIVO")
         if len(st.session_state.scanner_results) > 0:
