@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
+import time
 import requests
 import streamlit as st
-import streamlit.components.v1 as components
 import yfinance as yf
 
 # Page configuration
@@ -397,13 +397,20 @@ if st.session_state.signal_active_snp:
                     <p><b>ATR Dinamico:</b> {details.get('ATR Dinamico', 'N/A')}</p>
                     <p><b>Candela Prev. Spinta:</b> {details.get('Candela Prev. Spinta', 'N/A')}</p>
                     <p><b>Trend Macro (Multi-TF):</b> {details.get('Trend Macro (Multi-TF)', 'N/A')}</p>
-                    <p><b>Posizione Bollinger:</b> {details.get('Bollinger Position', 'N/A')}</p>
+                    <p><b>Posizione Bollinger:</b> {details.get('Posizione Bollinger', 'N/A')}</p>
                     <p><b>Momento MACD:</b> {details.get('MACD Cross', 'N/A')}</p>
                 </div>
                 """, unsafe_allow_html=True)
 
         st.markdown("### ⏳ Current Candle Countdown")
-        initial_left = get_seconds_to_next_candle(st.session_state.cached_tf_seconds_snp)
+        timer_placeholder = st.empty()
+        seconds_left = get_seconds_to_next_candle(st.session_state.cached_tf_seconds_snp)
         
-        # Timer HTML strutturato su riga unica per evitare qualsiasi errore di stringa
-        timer_html = '<div style="font-size: 28px; font-weight: bold; color: #00ffcc; text-align: center; background-color: #1f1f1f; padding: 15px; border-radius: 8px; border: 1px solid #333333;" id="countdown_snp">Loading timer...</div><script>var timeLeftSnp = ' + str(initial_left) + '; function updateTimerSnp() { if (timeLeftSnp    
+        mins = seconds_left // 60
+        secs = seconds_left % 60
+        timer_placeholder.markdown(
+            f'<div style="font-size: 28px; font-weight: bold; color: #00ffcc; text-align: center; background-color: #1f1f1f; padding: 15px; border-radius: 8px; border: 1px solid #333333;">⏱️ {mins:02d}:{secs:02d}</div>',
+            unsafe_allow_html=True
+        )
+
+# Registro Storico della Sessione in fondo     
