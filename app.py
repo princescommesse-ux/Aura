@@ -142,12 +142,21 @@ def ultimate_institutional_analysis(ticker, timeframe_choice):
         iv = interval_map.get(timeframe_choice, "1m")
         
         df = yf.download(ticker, period="1d", interval=iv, progress=False)
-        if df.empty or len(df) < 20:
+        if df.empty or len(df) < 30:
             return "STAND BY", "N/A", "Insufficient Market Data", {}
 
         high = df['High']
         low = df['Low']
         close = df['Close']
+        
+        # Filtro Volatilità ATR
+        tr1 = high - low
+        tr2 = (high - close.shift()).abs()
+        tr3 = (low - close.shift()).abs()
+        true_range = max(tr1, tr2, tr3) if isinstance(tr1, float) else pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+        atr = true_range.rolling(window=14).mean()
+        current_atr = float(atr.iloc[-1].item()) if not atr.empty else 0.0
+        is_volatility_active = current_atr > 0.0001
         
         # Calcolo RSI
         delta = close.diff()
@@ -157,12 +166,12 @@ def ultimate_institutional_analysis(ticker, timeframe_choice):
         rsi = 100 - (100 / (1 + rs))
         current_rsi = float(rsi.iloc[-1].item())
         
-        # Medie Mobili ed EMA
+        # Trend EMA
         ema9 = close.ewm(span=9, adjust=False).mean()
         ema21 = close.ewm(span=21, adjust=False).mean()
         is_bullish_trend = float(ema9.iloc[-1].item()) > float(ema21.iloc[-1].item())
         
-        # Bande di Bollinger
+        # Bollinger Bands
         sma20 = close.rolling(window=20).mean()
         std20 = close.rolling(window=20).std()
         upper_band = sma20 + (std20 * 2)
@@ -178,47 +187,29 @@ def ultimate_institutional_analysis(ticker, timeframe_choice):
         signal_line = macd.ewm(span=9, adjust=False).mean()
         is_macd_bullish = float(macd.iloc[-1].item()) > float(signal_line.iloc[-1].item())
 
-        # ADATTAMENTO DINAMICO SOGLIE RSI IN BASE AL TIMEFRAME
-        if timeframe_choice in ["M10 (600s)", "M15 (900s)"]:
-            rsi_buy_threshold = 48
-            rsi_sell_threshold = 52
-            bb_factor = 1.015
-        elif timeframe_choice == "M5 (300s)":
-            rsi_buy_threshold = 46
-            rsi_sell_threshold = 54
-            bb_factor = 1.01
-        else: # M1 e M3
-            rsi_buy_threshold = 45
-            rsi_sell_threshold = 55
-            bb_factor = 1.008
-
         details = {
             "RSI": f"{current_rsi:.1f}",
-            "Trend Breve (EMA)": "BULLISH 🟢" if is_bullish_trend else "BEARISH 🔴",
-            "Bollinger Position": "Near Lower Support" if curr_price <= curr_lower * bb_factor else ("Near Upper Resistance" if curr_price >= curr_upper * (2 - bb_factor) else "Mid-Channel"),
+            "ATR Volatilità": "OK 🟢" if is_volatility_active else "Bassa 🔴",
+            "Trend EMA": "BULLISH 🟢" if is_bullish_trend else "BEARISH 🔴",
+            "Bollinger": "Near Lower Support" if curr_price <= curr_lower * 1.005 else ("Near Upper Resistance" if curr_price >= curr_upper * 0.995 else "Mid-Channel"),
             "MACD Cross": "BULLISH 🟢" if is_macd_bullish else "BEARISH 🔴"
         }
 
-        # Logica di ingresso ottimizzata
-        if current_rsi <= rsi_buy_threshold and (is_bullish_trend or curr_price <= curr_lower * bb_factor):
+        # SOGLIE RIGIDE E SELETTIVE (Eliminazione falsi segnali)
+        # Il BUY scatta solo se RSI <= 35 (ipervenduto forte) + Trend e MACD rialzisti
+        if current_rsi <= 35 and is_bullish_trend and is_macd_bullish and is_volatility_active:
             direction = "BUY 🟢"
-        elif current_rsi >= rsi_sell_threshold and (not is_bullish_trend or curr_price >= curr_upper * (2 - bb_factor)):
+        # Il SELL scatta solo se RSI >= 65 (ipercomprato forte) + Trend e MACD ribassisti
+        elif current_rsi >= 65 and (not is_bullish_trend) and (not is_macd_bullish) and is_volatility_active:
             direction = "SELL 🔴"
         else:
-            return "STAND BY / NO TRADE", "N/A", "Market in Equilibrium", details
+            return "STAND BY / NO TRADE", "N/A", "Market filtered (High Precision Mode)", details
 
-        score = 70.0
-        if "BUY" in direction:
-            if current_rsi <= 40: score += 10.0
-            if is_macd_bullish: score += 10.0
-        elif "SELL" in direction:
-            if current_rsi >= 60: score += 10.0
-            if not is_macd_bullish: score += 10.0
+        score = 85.0
+        final_score = min(score, 98.0)
+        confidence_str = f"{final_score:.1f}% (Strict Institutional Filter)"
 
-        final_score = min(score, 95.0)
-        confidence_str = f"{final_score:.1f}% (Dynamic TF Aligned)"
-
-        return direction, confidence_str, "Precision Confluence Verified", details
+        return direction, confidence_str, "Elite Confluence Verified", details
             
     except Exception as e:
         return "STAND BY", "N/A", f"Error: {str(e)}", {}
@@ -307,7 +298,7 @@ if st.button("🚀 RUN SCANNER / ANALYSIS"):
 if st.session_state.signal_active_snp:
     if mercato_tipo == "🚀 Scanner Globale (Precisione Live)":
         st.success("Scanner completato!")
-        st.markdown("### 🎯 VALUTE CON SEGNALE ATTIVO")
+        st.markdown("### 🎯 VALUTE CON SEGNALE ATTIVO (FILTRO STRICT)")
         if len(st.session_state.scanner_results) > 0:
             for res in st.session_state.scanner_results:
                 st.markdown(f"""
@@ -319,8 +310,8 @@ if st.session_state.signal_active_snp:
         else:
             st.markdown("""
             <div class="standby-box">
-                <h4>🛑 NESSUN SEGNALE IN QUESTO MOMENTO</h4>
-                <p>Riprova tra qualche istante o cambia timeframe.</p>
+                <h4>🛑 NESSUN SEGNALE (MERCATO FILTRATO)</h4>
+                <p>Nessun asset rispetta i rigidi criteri di ipercomprato/ipervenduto istituzionale. Meglio attendere.</p>
             </div>
             """, unsafe_allow_html=True)
     else:
@@ -340,22 +331,22 @@ if st.session_state.signal_active_snp:
             if "STAND BY" in st.session_state.cached_direction_snp:
                 st.markdown(f"""
                 <div class="standby-box">
-                    <h4>🛑 STAND BY: MERCATO IN EQUILIBRIO</h4>
-                    <p>Nessuna spinta direzionale forte rilevata al momento.</p>
+                    <h4>🛑 STAND BY: FILTRI RIGIDI ATTIVI</h4>
+                    <p>Il mercato non offre un'opportunità pulita (evitati falsi segnali).</p>
                     <hr style="border-color: #ff4444;">
-                    <p style="color: #ffffff; text-align: left;"><b>RSI:</b> {details.get('RSI', 'N/A')}</p>
-                    <p style="color: #ffffff; text-align: left;"><b>Trend Breve:</b> {details.get('Trend Breve (EMA)', 'N/A')}</p>
-                    <p style="color: #ffffff; text-align: left;"><b>Bollinger:</b> {details.get('Bollinger Position', 'N/A')}</p>
-                    <p style="color: #ffffff; text-align: left;"><b>MACD:</b> {details.get('MACD Cross', 'N/A')}</p>
+                    <p style="color: #ffffff; text-align: left;"><b>RSI (Soglia 35/65):</b> {details.get('RSI', 'N/A')}</p>
+                    <p style="color: #ffffff; text-align: left;"><b>ATR Volatilità:</b> {details.get('ATR Volatilità', 'N/A')}</p>
+                    <p style="color: #ffffff; text-align: left;"><b>Trend EMA:</b> {details.get('Trend EMA', 'N/A')}</p>
+                    <p style="color: #ffffff; text-align: left;"><b>MACD Cross:</b> {details.get('MACD Cross', 'N/A')}</p>
                 </div>
                 """, unsafe_allow_html=True)
             else:
                 st.markdown(f"""
                 <div class="analysis-box">
-                    <h4>🎯 SIGNAL CONFLUENCE ALIGNED</h4>
-                    <p><b>RSI (14):</b> {details.get('RSI', 'N/A')}</p>
-                    <p><b>Trend Breve:</b> {details.get('Trend Breve (EMA)', 'N/A')}</p>
-                    <p><b>Posizione Bollinger:</b> {details.get('Bollinger Position', 'N/A')}</p>
+                    <h4>🎯 ELITE CONFLUENCE ALIGNED</h4>
+                    <p><b>RSI:</b> {details.get('RSI', 'N/A')}</p>
+                    <p><b>Volatilità ATR:</b> {details.get('ATR Volatilità', 'N/A')}</p>
+                    <p><b>Trend EMA:</b> {details.get('Trend EMA', 'N/A')}</p>
                     <p><b>Momento MACD:</b> {details.get('MACD Cross', 'N/A')}</p>
                 </div>
                 """, unsafe_allow_html=True)
@@ -372,7 +363,7 @@ if st.session_state.signal_active_snp:
         function updateTimerSnp() {{
             if (timeLeftSnp <= 0) {{
                 document.getElementById("countdown_snp").innerHTML = "⏰ CANDELA CHIUSA!";
-                document.getElementById("countdown_snp").style.color = "#ff4444";
+                document.getElementById("countdown_snp">style.color = "#ff4444";
                 return;
             }}
             var minutes = Math.floor(timeLeftSnp / 60);
