@@ -30,7 +30,7 @@ st.title("⚡ AURA PRO ⚡")
 
 mercato_tipo = st.radio("Seleziona Modalità:", ["🚀 Scanner Globale", "Forex Reale", "Asset OTC Valute", "Crypto OTC"], horizontal=True)
 
-# Coppie Forex Reali (19 coppie)
+# 19 coppie Forex Reali (senza USD/SEK)
 forex_dict = {
     "🇪🇺🇺🇸 EUR/USD": {"symbol": "EURUSD=X"},
     "🇬🇧🇺🇸 GBP/USD": {"symbol": "GBPUSD=X"},
@@ -53,7 +53,7 @@ forex_dict = {
     "🇨🇭🇯🇵 CHF/JPY": {"symbol": "CHFJPY=X"}
 }
 
-# Solo coppie OTC Valute con corrispettivo reale su Yahoo Finance
+# Coppie OTC Valute con corrispettivo diretto su Yahoo Finance
 otc_dict = {
     "🇦🇺🇨🇭 AUD/CHF OTC": {"symbol": "AUDCHF=X"},
     "🇦🇺🇺🇸 AUD/USD OTC": {"symbol": "AUDUSD=X"},
@@ -152,9 +152,7 @@ def ultimate_institutional_analysis(ticker, timeframe_choice, tf_sec):
         }
         iv_micro, iv_macro = interval_map.get(timeframe_choice, ("1m", "5m"))
         
-        # Micro Timeframe Data
         df = yf.download(ticker, period="1d", interval=iv_micro, progress=False)
-        # Macro Timeframe Data per Trend Confirmation
         df_macro = yf.download(ticker, period="5d", interval=iv_macro, progress=False)
         
         if df.empty or len(df) < 25 or df_macro.empty or len(df_macro) < 25:
@@ -163,18 +161,15 @@ def ultimate_institutional_analysis(ticker, timeframe_choice, tf_sec):
         close = df['Close']
         curr_price = float(close.iloc[-1].item())
         
-        # 1. Filtro ADX per evitare la congestione laterale
         adx_val = float(calculate_adx(df))
         if np.isnan(adx_val) or adx_val < 18.0:
             return "STAND BY / NO TRADE", "N/A", "Weak Trend / Market Chop", {"ADX": f"{adx_val:.1f}"}
 
-        # 2. Confluenza Trend Macro (EMA 9 vs EMA 21)
         macro_close = df_macro['Close']
         macro_ema9 = macro_close.ewm(span=9, adjust=False).mean()
         macro_ema21 = macro_close.ewm(span=21, adjust=False).mean()
         macro_bullish = float(macro_ema9.iloc[-1].item()) > float(macro_ema21.iloc[-1].item())
         
-        # 3. Indicatore Micro RSI (14)
         delta = close.diff()
         gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
@@ -182,7 +177,6 @@ def ultimate_institutional_analysis(ticker, timeframe_choice, tf_sec):
         rsi = 100 - (100 / (1 + rs))
         current_rsi = float(rsi.iloc[-1].item())
         
-        # 4. Bande di Bollinger Micro
         sma20 = close.rolling(window=20).mean()
         std20 = close.rolling(window=20).std()
         upper_band = sma20 + (std20 * 2)
@@ -197,7 +191,6 @@ def ultimate_institutional_analysis(ticker, timeframe_choice, tf_sec):
             "Bollinger Position": "Support Touch" if curr_price <= curr_lower * 1.005 else ("Resistance Touch" if curr_price >= curr_upper * 0.995 else "Channel")
         }
 
-        # REGOLA RIGIDA: Il segnale Micro DEVE essere perfettamente allineato con il Trend MACRO
         direction = "STAND BY / NO TRADE"
         if current_rsi <= 46 and macro_bullish and (curr_price <= curr_lower * 1.01):
             direction = "BUY 🟢"
@@ -206,7 +199,6 @@ def ultimate_institutional_analysis(ticker, timeframe_choice, tf_sec):
         else:
             return "STAND BY / NO TRADE", "N/A", "Timeframes Misaligned", details
 
-        # 5. CALCOLO CONFIDENZA DINAMICA ALGORITMICA
         base_score = 80.0
         if "BUY" in direction:
             rsi_bonus = max(0.0, (46.0 - current_rsi) * 0.9)
