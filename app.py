@@ -25,7 +25,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("⚡ AURA PRO (ULTIMATE EDITION) ⚡")
+st.title("⚡ AURA PRO ⚡")
 
 mercato_tipo = st.radio("Seleziona Modalità:", ["🚀 Scanner Globale (Precisione Live)", "Forex Reale (20 coppie)", "Asset OTC Valute (Reali)", "Crypto OTC (Top 3)"], horizontal=True)
 
@@ -117,7 +117,7 @@ def get_next_candle_time(seconds):
     secs_left = get_seconds_to_next_candle(seconds)
     target_time = now + timedelta(seconds=secs_left)
     
-    # ARROTONDAMENTO UNIFORME AL SECONDO MULTIPLO ESATTO (es. se M5, i secondi saranno sempre :00)
+    # Arrotondamento uniforme al secondo multiplo esatto
     total_epoch_secs = int(target_time.timestamp())
     aligned_epoch_secs = total_epoch_secs - (total_epoch_secs % seconds)
     aligned_time = datetime.fromtimestamp(aligned_epoch_secs)
@@ -179,7 +179,7 @@ def ultimate_institutional_analysis(ticker, timeframe_choice, tf_sec):
         else:
             return "STAND BY / NO TRADE", "N/A", "Market in Equilibrium", details
 
-        # CALCOLO REALE E DINAMICO DELLA CONFIDENZA
+        # Calcolo reale e dinamico della confidenza
         base_score = 75.0
         if "BUY" in direction:
             rsi_bonus = max(0.0, (48.0 - current_rsi) * 0.8)
