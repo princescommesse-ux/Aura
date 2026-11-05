@@ -7,7 +7,7 @@ import yfinance as yf
 
 # Page configuration
 st.set_page_config(
-    page_title="Aura", 
+    page_title="Aura Pro", 
     page_icon="⚡", 
     layout="centered"
 )
@@ -26,7 +26,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("⚡ AURA ⚡")
+st.title("⚡ AURA PRO ⚡")
 
 mercato_tipo = st.radio("Seleziona Modalità:", ["🚀 Scanner Globale", "Forex Reale", "Asset OTC Valute", "Crypto OTC"], horizontal=True)
 
@@ -105,14 +105,15 @@ tf_choice = st.radio("Choose from time basket:", list(scadenze.keys()), horizont
 tf_seconds = scadenze[tf_choice]
 
 def get_seconds_to_next_candle(seconds):
-    now = datetime.now()
+    # Ora locale del server + correzione fuso orario Italia (+1 ora rispetto a UTC standard)
+    now = datetime.utcnow() + timedelta(hours=1)
     total_secs = now.hour * 3600 + now.minute * 60 + now.second + now.microsecond / 1_000_000
     rem = total_secs % seconds
     sec_to_wait = seconds - rem
     return max(1, int(round(sec_to_wait)))
 
 def get_next_candle_time(seconds):
-    now = datetime.now()
+    now = datetime.utcnow() + timedelta(hours=1)
     secs_left = get_seconds_to_next_candle(seconds)
     target_time = now + timedelta(seconds=secs_left)
     total_epoch_secs = int(target_time.timestamp())
@@ -224,7 +225,7 @@ def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence
     if bot_token == "INSERISCI_QUI_IL_TUO_BOT_TOKEN":
         return
     message = (
-        f"⚡ *AURA SIGNAL* ⚡\n\n"
+        f"⚡ *AURA PRO SIGNAL* ⚡\n\n"
         f"🔹 *Asset:* `{display_name}`\n"
         f"⏰ *Timeframe:* `{timeframe}`\n"
         f"🎯 *Direction:* *{direction}*\n"
