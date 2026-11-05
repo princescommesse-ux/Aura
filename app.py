@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+  from datetime import datetime, timedelta
 import numpy as np
 import requests
 import streamlit as st
@@ -7,58 +7,20 @@ import yfinance as yf
 
 # Page configuration
 st.set_page_config(
-    page_title="Aura Pro | Institutional Terminal", 
+    page_title="Aura Pro", 
     page_icon="⚡", 
-    layout="wide"
+    layout="centered"
 )
 
-# Custom Cyberpunk Terminal Styling
+# Custom Dark Mode styling
 st.markdown(
     """
     <style>
-    .main { background-color: #0b0e14; color: #e1e6ed; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    h1 { color: #00ffcc; text-align: center; font-weight: 800; letter-spacing: 2px; text-shadow: 0 0 10px rgba(0, 255, 204, 0.3); }
-    .stButton>button { 
-        width: 100%; 
-        border-radius: 6px; 
-        font-weight: bold; 
-        background: linear-gradient(135deg, #1f2430 0%, #0f1219 100%); 
-        color: #00ffcc; 
-        border: 1px solid #00ffcc; 
-        padding: 12px;
-        transition: all 0.3s ease;
-    }
-    .stButton>button:hover { 
-        background: #00ffcc; 
-        color: #0b0e14; 
-        box-shadow: 0 0 15px rgba(0, 255, 204, 0.6); 
-    }
-    .analysis-card { 
-        background-color: #131722; 
-        padding: 20px; 
-        border-radius: 10px; 
-        border-left: 5px solid #00ffcc; 
-        box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-        margin-bottom: 15px;
-    }
-    .standby-card { 
-        background-color: #131722; 
-        padding: 20px; 
-        border-radius: 10px; 
-        border-left: 5px solid #ff4444; 
-        box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-        margin-bottom: 15px;
-        text-align: center;
-    }
-    .stat-badge {
-        background-color: #1e2330;
-        padding: 6px 12px;
-        border-radius: 4px;
-        border: 1px solid #2a3142;
-        display: inline-block;
-        margin-right: 10px;
-        margin-bottom: 5px;
-    }
+    .main { background-color: #121212; color: #ffffff; }
+    .stButton>button { width: 100%; border-radius: 8px; font-weight: bold; background-color: #1f1f1f; color: #00ffcc; border: 1px solid #333333; }
+    .stButton>button:hover { background-color: #333333; color: #ffffff; border-color: #00ffcc; }
+    .analysis-box { background-color: #1a1a1a; padding: 15px; border-radius: 8px; border: 1px solid #00ffcc; margin-top: 15px; }
+    .standby-box { background-color: #1a1a1a; padding: 15px; border-radius: 8px; border: 1px solid #ff4444; margin-top: 15px; text-align: center; color: #ff4444; font-weight: bold; }
     </style>
     """, 
     unsafe_allow_html=True,
@@ -66,9 +28,9 @@ st.markdown(
 
 st.title("⚡ AURA PRO ⚡")
 
-mercato_tipo = st.radio("SELEZIONA MODALITÀ OPERATIVA:", ["🚀 Scanner Globale", "Forex Reale", "Asset OTC Valute", "Crypto OTC"], horizontal=True)
+mercato_tipo = st.radio("Seleziona Modalità:", ["🚀 Scanner Globale", "Forex Reale", "Asset OTC Valute", "Crypto OTC"], horizontal=True)
 
-# 19 coppie Forex Reali
+# 19 coppie Forex Reali (senza USD/SEK)
 forex_dict = {
     "🇪🇺🇺🇸 EUR/USD": {"symbol": "EURUSD=X"},
     "🇬🇧🇺🇸 GBP/USD": {"symbol": "GBPUSD=X"},
@@ -76,7 +38,7 @@ forex_dict = {
     "🇦🇺🇺🇸 AUD/USD": {"symbol": "AUDUSD=X"},
     "🇺🇸🇨🇦 USD/CAD": {"symbol": "USDCAD=X"},
     "🇺🇸🇨🇭 USD/CHF": {"symbol": "USDCHF=X"},
-    "🇳ℤ🇺🇸 NZD/USD": {"symbol": "NZDUSD=X"},
+    "🇳🇿🇺🇸 NZD/USD": {"symbol": "NZDUSD=X"},
     "🇬🇧🇯🇵 GBP/JPY": {"symbol": "GBPJPY=X"},
     "🇪🇺🇯🇵 EUR/JPY": {"symbol": "EURJPY=X"},
     "🇪🇺🇬🇧 EUR/GBP": {"symbol": "EURGBP=X"},
@@ -91,6 +53,7 @@ forex_dict = {
     "🇨🇭🇯🇵 CHF/JPY": {"symbol": "CHFJPY=X"}
 }
 
+# Coppie OTC Valute con corrispettivo diretto su Yahoo Finance
 otc_dict = {
     "🇦🇺🇨🇭 AUD/CHF OTC": {"symbol": "AUDCHF=X"},
     "🇦🇺🇺🇸 AUD/USD OTC": {"symbol": "AUDUSD=X"},
@@ -107,12 +70,13 @@ otc_dict = {
     "🇬🇧🇯🇵 GBP/JPY OTC": {"symbol": "GBPJPY=X"},
     "🇬🇧🇦🇺 GBP/AUD OTC": {"symbol": "GBPAUD=X"},
     "🇺🇸🇯🇵 USD/JPY OTC": {"symbol": "USDJPY=X"},
-    "🇳ℤ🇯🇵 NZD/JPY OTC": {"symbol": "NZDJPY=X"},
+    "🇳🇿🇯🇵 NZD/JPY OTC": {"symbol": "NZDJPY=X"},
     "🇨🇦🇨🇭 CAD/CHF OTC": {"symbol": "CADCHF=X"},
     "🇦🇺🇨🇦 AUD/CAD OTC": {"symbol": "AUDCAD=X"},
-    "🇳ℤ🇺🇸 NZD/USD OTC": {"symbol": "NZDUSD=X"}
+    "🇳🇿🇺🇸 NZD/USD OTC": {"symbol": "NZDUSD=X"}
 }
 
+# Crypto OTC
 crypto_otc_dict = {
     "₿ Bitcoin OTC": {"symbol": "BTC-USD"},
     "Ξ Ethereum OTC": {"symbol": "ETH-USD"},
@@ -120,19 +84,17 @@ crypto_otc_dict = {
 }
 
 if mercato_tipo != "🚀 Scanner Globale":
-    col_a, col_b = st.columns([2, 1])
-    with col_a:
-        if mercato_tipo == "Forex Reale":
-            selected_display = st.selectbox("Coppia di Valute", list(forex_dict.keys()), key="snp_asset_forex")
-            selected_asset = forex_dict[selected_display]["symbol"]
-        elif mercato_tipo == "Asset OTC Valute":
-            selected_display = st.selectbox("Asset OTC", list(otc_dict.keys()), key="snp_asset_otc")
-            selected_asset = otc_dict[selected_display]["symbol"]
-        else:
-            selected_display = st.selectbox("Crypto OTC", list(crypto_otc_dict.keys()), key="snp_asset_crypto")
-            selected_asset = crypto_otc_dict[selected_display]["symbol"]
+    if mercato_tipo == "Forex Reale":
+        selected_display = st.selectbox("Select Currency Pair", list(forex_dict.keys()), key="snp_asset_forex")
+        selected_asset = forex_dict[selected_display]["symbol"]
+    elif mercato_tipo == "Asset OTC Valute":
+        selected_display = st.selectbox("Select OTC Asset", list(otc_dict.keys()), key="snp_asset_otc")
+        selected_asset = otc_dict[selected_display]["symbol"]
+    else:
+        selected_display = st.selectbox("Select Crypto OTC Asset", list(crypto_otc_dict.keys()), key="snp_asset_crypto")
+        selected_asset = crypto_otc_dict[selected_display]["symbol"]
 
-st.markdown("### ⏰ Timeframe Operativo")
+st.markdown("### ⏰ Timeframe")
 scadenze = {
     "M1 (60s)": 60,
     "M3 (180s)": 180,
@@ -140,7 +102,7 @@ scadenze = {
     "M10 (600s)": 600,
     "M15 (900s)": 900
 }
-tf_choice = st.radio("Seleziona durata candela:", list(scadenze.keys()), horizontal=True, key="snp_tf")
+tf_choice = st.radio("Choose from time basket:", list(scadenze.keys()), horizontal=True, key="snp_tf")
 tf_seconds = scadenze[tf_choice]
 
 def get_seconds_to_next_candle(seconds):
@@ -194,14 +156,14 @@ def ultimate_institutional_analysis(ticker, timeframe_choice, tf_sec):
         df_macro = yf.download(ticker, period="5d", interval=iv_macro, progress=False)
         
         if df.empty or len(df) < 25 or df_macro.empty or len(df_macro) < 25:
-            return "STAND BY", "N/A", "Dati di mercato insufficienti", {}
+            return "STAND BY", "N/A", "Insufficient Market Data", {}
 
         close = df['Close']
         curr_price = float(close.iloc[-1].item())
         
         adx_val = float(calculate_adx(df))
         if np.isnan(adx_val) or adx_val < 18.0:
-            return "STAND BY / NO TRADE", "N/A", "Trend Debole / Mercato Laterale", {"ADX": f"{adx_val:.1f}"}
+            return "STAND BY / NO TRADE", "N/A", "Weak Trend / Market Chop", {"ADX": f"{adx_val:.1f}"}
 
         macro_close = df_macro['Close']
         macro_ema9 = macro_close.ewm(span=9, adjust=False).mean()
@@ -225,8 +187,8 @@ def ultimate_institutional_analysis(ticker, timeframe_choice, tf_sec):
         details = {
             "RSI": f"{current_rsi:.1f}",
             "Trend Macro": "BULLISH 🟢" if macro_bullish else "BEARISH 🔴",
-            "ADX Strength": f"{adx_val:.1f} (Forte)" if adx_val >= 25 else f"{adx_val:.1f} (Moderato)",
-            "Bollinger Position": "Supporto" if curr_price <= curr_lower * 1.005 else ("Resistenza" if curr_price >= curr_upper * 0.995 else "Canale")
+            "ADX Strength": f"{adx_val:.1f} (Strong)" if adx_val >= 25 else f"{adx_val:.1f} (Moderate)",
+            "Bollinger Position": "Support Touch" if curr_price <= curr_lower * 1.005 else ("Resistance Touch" if curr_price >= curr_upper * 0.995 else "Channel")
         }
 
         direction = "STAND BY / NO TRADE"
@@ -235,7 +197,7 @@ def ultimate_institutional_analysis(ticker, timeframe_choice, tf_sec):
         elif current_rsi >= 54 and (not macro_bullish) and (curr_price >= curr_upper * 0.99):
             direction = "SELL 🔴"
         else:
-            return "STAND BY / NO TRADE", "N/A", "Timeframes Disallineati", details
+            return "STAND BY / NO TRADE", "N/A", "Timeframes Misaligned", details
 
         base_score = 80.0
         if "BUY" in direction:
@@ -250,12 +212,12 @@ def ultimate_institutional_analysis(ticker, timeframe_choice, tf_sec):
             if adx_val >= 25.0: base_score += 4.0
 
         final_score = min(max(base_score, 81.0), 97.5)
-        confidence_str = f"{final_score:.1f}% (MTF Confluence)"
+        confidence_str = f"{final_score:.1f}% (Institutional MTF Confluence)"
 
-        return direction, confidence_str, "Confluenza Verificata", details
+        return direction, confidence_str, "Confluence Verified", details
             
     except Exception as e:
-        return "STAND BY", "N/A", f"Errore: {str(e)}", {}
+        return "STAND BY", "N/A", f"Error: {str(e)}", {}
 
 def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence, entry_time):
     bot_token = "INSERISCI_QUI_IL_TUO_BOT_TOKEN"
@@ -266,9 +228,9 @@ def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence
         f"⚡ *AURA PRO SIGNAL* ⚡\n\n"
         f"🔹 *Asset:* `{display_name}`\n"
         f"⏰ *Timeframe:* `{timeframe}`\n"
-        f"🎯 *Direzione:* *{direction}*\n"
-        f"🕒 *Ingresso:* `{entry_time}`\n"
-        f"📈 *Confidenza:* `{win_rate}`\n"
+        f"🎯 *Direction:* *{direction}*\n"
+        f"🕒 *Entry Time:* `{entry_time}`\n"
+        f"📈 *Confidence:* `{win_rate}`\n"
         f"🛡️ *Status:* `{confidence}`"
     )
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
@@ -289,8 +251,7 @@ if "cached_time_snp" not in st.session_state: st.session_state.cached_time_snp =
 if "cached_confidence_snp" not in st.session_state: st.session_state.cached_confidence_snp = None
 if "cached_details_snp" not in st.session_state: st.session_state.cached_details_snp = {}
 
-st.markdown("<br>", unsafe_allow_html=True)
-if st.button("🚀 AVVIA ANALISI ALGORITMICA / SCANNER"):
+if st.button("🚀 RUN SCANNER / ANALYSIS"):
     if mercato_tipo == "🚀 Scanner Globale":
         st.session_state.scanner_results = []
         combined_dict = {**forex_dict, **otc_dict}
@@ -340,74 +301,66 @@ if st.button("🚀 AVVIA ANALISI ALGORITMICA / SCANNER"):
             )
 
 if st.session_state.signal_active_snp:
-    st.markdown("---")
     if mercato_tipo == "🚀 Scanner Globale":
-        st.subheader("🎯 MATRICE SEGNALI ATTIVI")
+        st.success("Scanner completato!")
+        st.markdown("### 🎯 VALUTE CON SEGNALE ATTIVO")
         if len(st.session_state.scanner_results) > 0:
-            cols = st.columns(2)
-            idx = 0
             for res in st.session_state.scanner_results:
-                with cols[idx % 2]:
-                    st.markdown(f"""
-                    <div class="analysis-card">
-                        <h3 style="margin:0; color:#00ffcc;">{res['asset']}</h3>
-                        <h2 style="margin:5px 0; color:#ffffff;">{res['direction']}</h2>
-                        <div style="margin-top:10px;">
-                            <span class="stat-badge"><b>TF:</b> {res['timeframe']}</span>
-                            <span class="stat-badge"><b>RSI:</b> {res['rsi']}</span>
-                            <span class="stat-badge"><b>Conf:</b> {res['confidence']}</span>
-                        </div>
-                        <p style="margin-top:10px; margin-bottom:0; color:#00ffcc;"><b>Ingresso Candela:</b> {res['entry_time']}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-                idx += 1
+                st.markdown(f"""
+                <div class="analysis-box">
+                    <h4>{res['asset']} &rarr; <b>{res['direction']}</b></h4>
+                    <p><b>Timeframe:</b> {res['timeframe']} | <b>Confidence:</b> {res['confidence']} | <b>RSI:</b> {res['rsi']} | <b>Entry:</b> {res['entry_time']}</p>
+                </div>
+                """, unsafe_allow_html=True)
         else:
             st.markdown("""
-            <div class="standby-card">
-                <h3>🛑 NESSUNA CONFLUENZA RILEVATA</h3>
-                <p style="color:#a0aab8;">Nessun asset soddisfa contemporaneamente i filtri Macro-Trend e ADX al momento.</p>
+            <div class="standby-box">
+                <h4>🛑 NESSUN SEGNALE IN QUESTO MOMENTO</h4>
+                <p>Nessun asset soddisfa i filtri di allineamento Macro-Trend e ADX.</p>
             </div>
             """, unsafe_allow_html=True)
     else:
-        st.subheader("📊 RISULTATO ANALISI ISTITUZIONALE")
+        st.success("Analysis complete!")
+        st.markdown("### SIGNAL RESULT")
+        st.markdown(f"""
+        * **Asset:** `{st.session_state.cached_asset_display_snp}`
+        * **Timeframe:** `{st.session_state.cached_tf_choice_snp}`
+        * **Signal Direction:** **{st.session_state.cached_direction_snp}**
+        * **Entry Time (Candle Close):** `{st.session_state.cached_time_snp}`
+        * **Dynamic AI Confidence:** `{st.session_state.cached_win_rate_snp}`
+        * **Filter Status:** `{st.session_state.cached_confidence_snp}`
+        """)
         
         details = st.session_state.cached_details_snp
-        if "STAND BY" in st.session_state.cached_direction_snp:
-            st.markdown(f"""
-            <div class="standby-card">
-                <h2 style="color:#ff4444; margin:0;">🛑 STAND BY: FILTRI NON SUPERATI</h2>
-                <p style="color:#a0aab8; margin-top:5px;">Mercato in fase di congestione o timeframe non allineati.</p>
-                <hr style="border-color: #2a3142;">
-                <div style="text-align:left; display:inline-block;">
+        if details:
+            if "STAND BY" in st.session_state.cached_direction_snp:
+                st.markdown(f"""
+                <div class="standby-box">
+                    <h4>🛑 STAND BY: FILTRI NON SUPERATI</h4>
+                    <p>Mercato laterale o disallineamento tra Trend Macro e Micro.</p>
+                    <hr style="border-color: #ff4444;">
+                    <p style="color: #ffffff; text-align: left;"><b>RSI:</b> {details.get('RSI', 'N/A')}</p>
+                    <p style="color: #ffffff; text-align: left;"><b>Trend Macro:</b> {details.get('Trend Macro', 'N/A')}</p>
+                    <p style="color: #ffffff; text-align: left;"><b>Forza ADX:</b> {details.get('ADX Strength', 'N/A')}</p>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div class="analysis-box">
+                    <h4>🎯 CONFLUENZA ISTITUZIONALE VERIFICATA</h4>
                     <p><b>RSI (14):</b> {details.get('RSI', 'N/A')}</p>
                     <p><b>Trend Macro:</b> {details.get('Trend Macro', 'N/A')}</p>
-                    <p><b>Forza Trend ADX:</b> {details.get('ADX Strength', 'N/A')}</p>
+                    <p><b>Forza ADX:</b> {details.get('ADX Strength', 'N/A')}</p>
+                    <p><b>Posizione Bollinger:</b> {details.get('Bollinger Position', 'N/A')}</p>
                 </div>
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            st.markdown(f"""
-            <div class="analysis-card">
-                <h2 style="color:#00ffcc; margin:0;">🎯 SEGNALE CONFERMATO: {st.session_state.cached_direction_snp}</h2>
-                <p style="color:#a0aab8; margin-top:5px;">Asset: <b>{st.session_state.cached_asset_display_snp}</b> | Timeframe: <b>{st.session_state.cached_tf_choice_snp}</b></p>
-                <hr style="border-color: #2a3142;">
-                <div style="margin-bottom:10px;">
-                    <span class="stat-badge"><b>Orario Ingresso:</b> {st.session_state.cached_time_snp}</span>
-                    <span class="stat-badge"><b>Confidenza AI:</b> {st.session_state.cached_win_rate_snp}</span>
-                </div>
-                <div style="margin-top:10px; color:#e1e6ed;">
-                    <p style="margin:3px 0;"><b>RSI:</b> {details.get('RSI', 'N/A')} | <b>Trend Macro:</b> {details.get('Trend Macro', 'N/A')}</p>
-                    <p style="margin:3px 0;"><b>ADX:</b> {details.get('ADX Strength', 'N/A')} | <b>Bollinger:</b> {details.get('Bollinger Position', 'N/A')}</p>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
 
-        st.markdown("### ⏳ Sincronizzazione Candela (Pocket Option)")
+        st.markdown("### ⏳ Current Candle Countdown (Pocket Option Sync)")
         initial_left = get_seconds_to_next_candle(st.session_state.cached_tf_seconds_snp)
         
         timer_html = f"""
-        <div style="font-size: 32px; font-weight: 800; color: #00ffcc; text-align: center; background-color: #131722; padding: 18px; border-radius: 8px; border: 1px solid #00ffcc; letter-spacing: 2px;" id="countdown_snp">
-            Sincronizzazione in corso...
+        <div style="font-size: 28px; font-weight: bold; color: #00ffcc; text-align: center; background-color: #1f1f1f; padding: 15px; border-radius: 8px; border: 1px solid #333333;" id="countdown_snp">
+            Loading timer...
         </div>
         <script>
         var timeLeftSnp = {initial_left};
@@ -415,7 +368,6 @@ if st.session_state.signal_active_snp:
             if (timeLeftSnp <= 0) {{
                 document.getElementById("countdown_snp").innerHTML = "⏰ CANDELA CHIUSA!";
                 document.getElementById("countdown_snp").style.color = "#ff4444";
-                document.getElementById("countdown_snp").style.borderColor = "#ff4444";
                 return;
             }}
             var minutes = Math.floor(timeLeftSnp / 60);
@@ -429,4 +381,4 @@ if st.session_state.signal_active_snp:
         updateTimerSnp();
         </script>
         """
-        components.html(timer_html, height=90)
+        components.html(timer_html, height=80)
