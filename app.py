@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 import requests
 import streamlit as st
+import streamlit.components.v1 as components
 import yfinance as yf
 
 # Page configuration
@@ -20,7 +21,6 @@ st.markdown(
     .market-badge { background-color: #1f1f1f; padding: 8px 12px; border-radius: 6px; border: 1px solid #333333; font-size: 14px; margin-bottom: 15px; text-align: center; }
     .analysis-box { background-color: #1a1a1a; padding: 15px; border-radius: 8px; border: 1px solid #00ffcc; margin-top: 15px; }
     .standby-box { background-color: #1a1a1a; padding: 15px; border-radius: 8px; border: 1px solid #ff4444; margin-top: 15px; text-align: center; color: #ff4444; font-weight: bold; }
-    .history-box { background-color: #181818; padding: 10px; border-radius: 6px; border: 1px solid #444444; margin-top: 10px; font-size: 13px; }
     </style>
     """, 
     unsafe_allow_html=True,
@@ -28,7 +28,7 @@ st.markdown(
 
 st.title("⚡ AURA PRO (ULTIMATE EDITION) ⚡")
 
-mercato_tipo = st.radio("Seleziona Modalità:", ["🚀 Scanner Globale (Full Elite + Log)", "Forex Reale (20 coppie)", "Asset OTC Valute (Reali)", "Crypto OTC (Top 3)"], horizontal=True)
+mercato_tipo = st.radio("Seleziona Modalità:", ["🚀 Scanner Globale (Precisione Live)", "Forex Reale (20 coppie)", "Asset OTC Valute (Reali)", "Crypto OTC (Top 3)"], horizontal=True)
 
 # 20 coppie Forex Reali ufficiali
 forex_dict = {
@@ -84,7 +84,7 @@ crypto_otc_dict = {
     "☀️ Solana OTC": {"symbol": "SOL-USD"}
 }
 
-if mercato_tipo != "🚀 Scanner Globale (Full Elite + Log)":
+if mercato_tipo != "🚀 Scanner Globale (Precisione Live)":
     if mercato_tipo == "Forex Reale (20 coppie)":
         selected_display = st.selectbox("Select Currency Pair", list(forex_dict.keys()), key="snp_asset_forex")
         selected_asset = forex_dict[selected_display]["symbol"]
@@ -149,7 +149,6 @@ def ultimate_institutional_analysis(ticker, timeframe_choice):
         low = df['Low']
         close = df['Close']
         
-        # Filtro RSI bilanciato (soglie a 45 e 55 per maggiore reattività)
         delta = close.diff()
         gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
@@ -182,7 +181,6 @@ def ultimate_institutional_analysis(ticker, timeframe_choice):
             "MACD Cross": "BULLISH 🟢" if is_macd_bullish else "BEARISH 🔴"
         }
 
-        # Condizioni bilanciate per garantire frequenza e precisione dei segnali
         if current_rsi <= 45 and (is_bullish_trend or curr_price <= curr_lower * 1.01):
             direction = "BUY 🟢"
         elif current_rsi >= 55 and (not is_bullish_trend or curr_price >= curr_upper * 0.99):
@@ -229,7 +227,6 @@ def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence
 
 if "signal_active_snp" not in st.session_state: st.session_state.signal_active_snp = False
 if "scanner_results" not in st.session_state: st.session_state.scanner_results = []
-if "session_history" not in st.session_state: st.session_state.session_history = []
 if "cached_asset_display_snp" not in st.session_state: st.session_state.cached_asset_display_snp = None
 if "cached_tf_choice_snp" not in st.session_state: st.session_state.cached_tf_choice_snp = None
 if "cached_tf_seconds_snp" not in st.session_state: st.session_state.cached_tf_seconds_snp = None
@@ -240,7 +237,7 @@ if "cached_confidence_snp" not in st.session_state: st.session_state.cached_conf
 if "cached_details_snp" not in st.session_state: st.session_state.cached_details_snp = {}
 
 if st.button("🚀 RUN SCANNER / ANALYSIS"):
-    if mercato_tipo == "🚀 Scanner Globale (Full Elite + Log)":
+    if mercato_tipo == "🚀 Scanner Globale (Precisione Live)":
         st.session_state.scanner_results = []
         combined_dict = {**forex_dict, **otc_dict}
         
@@ -261,13 +258,6 @@ if st.button("🚀 RUN SCANNER / ANALYSIS"):
                     "timeframe": tf_choice
                 }
                 st.session_state.scanner_results.append(res_dict)
-                st.session_state.session_history.insert(0, {
-                    "timestamp": datetime.now().strftime("%H:%M:%S"),
-                    "asset": name,
-                    "tf": tf_choice,
-                    "dir": direction,
-                    "conf": win_rate
-                })
             i += 1
             progress_bar.progress(i / total_items)
             
@@ -286,13 +276,6 @@ if st.button("🚀 RUN SCANNER / ANALYSIS"):
         st.session_state.signal_active_snp = True
             
         if "STAND BY" not in direction:
-            st.session_state.session_history.insert(0, {
-                "timestamp": datetime.now().strftime("%H:%M:%S"),
-                "asset": selected_display,
-                "tf": tf_choice,
-                "dir": direction,
-                "conf": win_rate
-            })
             send_telegram_alert(
                 selected_display, 
                 tf_choice, 
@@ -303,7 +286,7 @@ if st.button("🚀 RUN SCANNER / ANALYSIS"):
             )
 
 if st.session_state.signal_active_snp:
-    if mercato_tipo == "🚀 Scanner Globale (Full Elite + Log)":
+    if mercato_tipo == "🚀 Scanner Globale (Precisione Live)":
         st.success("Scanner completato!")
         st.markdown("### 🎯 VALUTE CON SEGNALE ATTIVO")
         if len(st.session_state.scanner_results) > 0:
@@ -358,27 +341,30 @@ if st.session_state.signal_active_snp:
                 </div>
                 """, unsafe_allow_html=True)
 
-        st.markdown("### ⏳ Current Candle Countdown")
-        timer_placeholder = st.empty()
-        seconds_left = get_seconds_to_next_candle(st.session_state.cached_tf_seconds_snp)
+        st.markdown("### ⏳ Current Candle Countdown (Pocket Option Sync)")
+        initial_left = get_seconds_to_next_candle(st.session_state.cached_tf_seconds_snp)
         
-        mins = seconds_left // 60
-        secs = seconds_left % 60
-        timer_placeholder.markdown(
-            f'<div style="font-size: 28px; font-weight: bold; color: #00ffcc; text-align: center; background-color: #1f1f1f; padding: 15px; border-radius: 8px; border: 1px solid #333333;">⏱️ {mins:02d}:{secs:02d}</div>',
-            unsafe_allow_html=True
-        )
-
-# Registro Storico della Sessione in fondo alla pagina
-st.markdown("---")
-st.markdown("### 📋 Registro Storico Segnali della Sessione")
-if len(st.session_state.session_history) > 0:
-    for h in st.session_state.session_history[:10]:
-        st.markdown(f"""
-        <div class="history-box">
-            🕒 <b>[{h['timestamp']}]</b> &nbsp;|&nbsp; <b>{h['asset']}</b> ({h['tf']}) &nbsp;&rarr;&nbsp; <b style="color: {'#00ffcc' if 'BUY' in h['dir'] else '#ff4444'};">{h['dir']}</b> &nbsp;|&nbsp; Conf: {h['conf']}
+        timer_html = f"""
+        <div style="font-size: 28px; font-weight: bold; color: #00ffcc; text-align: center; background-color: #1f1f1f; padding: 15px; border-radius: 8px; border: 1px solid #333333;" id="countdown_snp">
+            Loading timer...
         </div>
-        """, unsafe_allow_html=True)
-else:
-    st.markdown("<p style='color: gray; font-size: 13px;'>Nessun segnale registrato in questa sessione.</p>", unsafe_allow_html=True)
-    
+        <script>
+        var timeLeftSnp = {initial_left};
+        function updateTimerSnp() {{
+            if (timeLeftSnp <= 0) {{
+                document.getElementById("countdown_snp").innerHTML = "⏰ CANDELA CHIUSA!";
+                document.getElementById("countdown_snp").style.color = "#ff4444";
+                return;
+            }}
+            var minutes = Math.floor(timeLeftSnp / 60);
+            var seconds = timeLeftSnp % 60;
+            minutes = minutes < 10 ? "0" + minutes : minutes;
+            seconds = seconds < 10 ? "0" + seconds : seconds;
+            document.getElementById("countdown_snp").innerHTML = "⏱️ " + minutes + ":" + seconds;
+            timeLeftSnp--;
+        }}
+        setInterval(updateTimerSnp, 1000);
+        updateTimerSnp();
+        </script>
+        """
+        components.html(timer_html, height=80)
