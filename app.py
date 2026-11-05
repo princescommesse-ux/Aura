@@ -28,10 +28,9 @@ st.markdown(
 
 st.title("⚡ AURA PRO ⚡")
 
-# Selezione della Modalità di Mercato (Solo asset reali e verificati)
-mercato_tipo = st.radio("Seleziona Modalità:", ["🚀 Scanner Globale (Valute Verificate)", "Forex Reale (20 coppie)", "Asset OTC Valute", "Crypto OTC (Top 3)"], horizontal=True)
+mercato_tipo = st.radio("Seleziona Modalità:", ["🚀 Scanner Globale (Valute Verificate)", "Forex Reale (20 coppie)", "Asset OTC Valute (Reali)", "Crypto OTC (Top 3)"], horizontal=True)
 
-# 20 coppie Forex Reali
+# 20 coppie Forex Reali ufficiali
 forex_dict = {
     "🇪🇺🇺🇸 EUR/USD": {"symbol": "EURUSD=X"},
     "🇬🇧🇺🇸 GBP/USD": {"symbol": "GBPUSD=X"},
@@ -55,68 +54,30 @@ forex_dict = {
     "🇸🇪🇺🇸 USD/SEK": {"symbol": "USDSEK=X"}
 }
 
-# Lista ufficiale delle coppie OTC Valute (mappate su feed Forex reali)
+# Solo coppie OTC Valute con corrispettivo reale e diretto su Yahoo Finance
 otc_dict = {
     "🇦🇺🇨🇭 AUD/CHF OTC": {"symbol": "AUDCHF=X"},
-    "🇦🇺🇳🇿 AUD/NZD OTC": {"symbol": "AUDUSD=X"},
     "🇦🇺🇺🇸 AUD/USD OTC": {"symbol": "AUDUSD=X"},
-    "🇧🇭🇨🇳 BHD/CNY OTC": {"symbol": "EURUSD=X"},
-    "🇨🇦🇯🇵 CAD/JPY OTC": {"symbol": "USDJPY=X"},
+    "🇨🇦🇯🇵 CAD/JPY OTC": {"symbol": "CADJPY=X"},
     "🇪🇺🇨🇭 EUR/CHF OTC": {"symbol": "EURCHF=X"},
     "🇪🇺🇬🇧 EUR/GBP OTC": {"symbol": "EURGBP=X"},
-    "🇪🇺🇭🇺 EUR/HUF OTC": {"symbol": "EURUSD=X"},
     "🇪🇺🇺🇸 EUR/USD OTC": {"symbol": "EURUSD=X"},
     "🇬🇧🇺🇸 GBP/USD OTC": {"symbol": "GBPUSD=X"},
-    "🇯🇴🇨🇳 JOD/CNY OTC": {"symbol": "EURUSD=X"},
-    "🇳🇬🇺🇸 NGN/USD OTC": {"symbol": "EURUSD=X"},
-    "🇺🇸🇧🇷 USD/BRL OTC": {"symbol": "USDCAD=X"},
     "🇺🇸🇨🇭 USD/CHF OTC": {"symbol": "USDCHF=X"},
-    "🇺🇸🇨🇱 USD/CLP OTC": {"symbol": "USDCAD=X"},
-    "🇺🇸🇨🇴 USD/COP OTC": {"symbol": "USDCAD=X"},
-    "🇺🇸🇩🇿 USD/DZD OTC": {"symbol": "USDCAD=X"},
-    "🇺🇸🇮🇩 USD/IDR OTC": {"symbol": "USDJPY=X"},
-    "🇺🇸🇮🇳 USD/INR OTC": {"symbol": "USDJPY=X"},
-    "🇺🇸🇵🇰 USD/PKR OTC": {"symbol": "USDJPY=X"},
-    "🇺🇸🇹🇭 USD/THB OTC": {"symbol": "USDJPY=X"},
     "🇪🇺🇯🇵 EUR/JPY OTC": {"symbol": "EURJPY=X"},
-    "🇪🇺🇳🇿 EUR/NZD OTC": {"symbol": "EURUSD=X"},
-    "🇰🇪🇺🇸 KES/USD OTC": {"symbol": "EURUSD=X"},
-    "🇺🇦🇺🇸 UAH/USD OTC": {"symbol": "EURUSD=X"},
     "🇺🇸🇨🇦 USD/CAD OTC": {"symbol": "USDCAD=X"},
     "🇦🇺🇯🇵 AUD/JPY OTC": {"symbol": "AUDJPY=X"},
-    "🇱🇧🇺🇸 LBP/USD OTC": {"symbol": "EURUSD=X"},
-    "🇿🇦🇺🇸 ZAR/USD OTC": {"symbol": "USDUSD=X"},
-    "🇺🇸🇦🇷 USD/ARS OTC": {"symbol": "USDCAD=X"},
     "🇨🇭🇯🇵 CHF/JPY OTC": {"symbol": "CHFJPY=X"},
-    "🇨🇭🇳🇴 CHF/NOK OTC": {"symbol": "USDCHF=X"},
-    "🇺🇸🇸🇬 USD/SGD OTC": {"symbol": "USDCAD=X"},
-    "🇦🇪🇨🇳 AED/CNY OTC": {"symbol": "EURUSD=X"},
-    "🇺🇸🇷🇺 USD/RUB OTC": {"symbol": "USDCAD=X"},
-    "🇺🇸🇧🇩 USD/BDT OTC": {"symbol": "USDCAD=X"},
     "🇬🇧🇯🇵 GBP/JPY OTC": {"symbol": "GBPJPY=X"},
-    "🇺🇸🇨🇳 USD/CNH OTC": {"symbol": "USDCAD=X"},
-    "🇺🇸🇲🇾 USD/MYR OTC": {"symbol": "USDCAD=X"},
-    "🇺🇸🇪🇬 USD/EGP OTC": {"symbol": "USDCAD=X"},
     "🇬🇧🇦🇺 GBP/AUD OTC": {"symbol": "GBPAUD=X"},
     "🇺🇸🇯🇵 USD/JPY OTC": {"symbol": "USDJPY=X"},
-    "🇪🇺🇹🇷 EUR/TRY OTC": {"symbol": "EURUSD=X"},
-    "🇶🇦🇨🇳 QAR/CNY OTC": {"symbol": "EURUSD=X"},
-    "🇺🇸🇵🇭 USD/PHP OTC": {"symbol": "USDCAD=X"},
-    "🇲🇦🇺🇸 MAD/USD OTC": {"symbol": "EURUSD=X"},
-    "🇸🇦🇨🇳 SAR/CNY OTC": {"symbol": "EURUSD=X"},
-    "🇹🇳🇺🇸 TND/USD OTC": {"symbol": "EURUSD=X"},
-    "🇺🇸🇻🇳 USD/VND OTC": {"symbol": "USDCAD=X"},
-    "🇳🇿🇯🇵 NZD/JPY OTC": {"symbol": "USDJPY=X"},
-    "🇨🇦🇨🇭 CAD/CHF OTC": {"symbol": "USDCHF=X"},
+    "🇳🇿🇯🇵 NZD/JPY OTC": {"symbol": "NZDJPY=X"},
+    "🇨🇦🇨🇭 CAD/CHF OTC": {"symbol": "CADCHF=X"},
     "🇦🇺🇨🇦 AUD/CAD OTC": {"symbol": "AUDCAD=X"},
-    "🇺🇸🇲🇽 USD/MXN OTC": {"symbol": "USDCAD=X"},
-    "🇾🇪🇺🇸 YER/USD OTC": {"symbol": "EURUSD=X"},
-    "🇪🇺🇷🇺 EUR/RUB OTC": {"symbol": "EURRUB=X"},
-    "🇳🇿🇺🇸 NZD/USD OTC": {"symbol": "NZDUSD=X"},
-    "🇴🇲🇨🇳 OMR/CNY OTC": {"symbol": "EURUSD=X"}
+    "🇳🇿🇺🇸 NZD/USD OTC": {"symbol": "NZDUSD=X"}
 }
 
-# Crypto OTC blindate (solo le Top 3 a massima liquidità)
+# Crypto OTC blindate (Top 3)
 crypto_otc_dict = {
     "₿ Bitcoin OTC": {"symbol": "BTC-USD"},
     "Ξ Ethereum OTC": {"symbol": "ETH-USD"},
@@ -127,7 +88,7 @@ if mercato_tipo != "🚀 Scanner Globale (Valute Verificate)":
     if mercato_tipo == "Forex Reale (20 coppie)":
         selected_display = st.selectbox("Select Currency Pair", list(forex_dict.keys()), key="snp_asset_forex")
         selected_asset = forex_dict[selected_display]["symbol"]
-    elif mercato_tipo == "Asset OTC Valute":
+    elif mercato_tipo == "Asset OTC Valute (Reali)":
         selected_display = st.selectbox("Select OTC Asset", list(otc_dict.keys()), key="snp_asset_otc")
         selected_asset = otc_dict[selected_display]["symbol"]
     else:
@@ -240,173 +201,4 @@ def ultimate_institutional_analysis(ticker, timeframe_choice):
             if not is_macd_bullish: score += 8.0
 
         final_score = min(score, 82.5)
-        confidence_str = f"{final_score:.1f}% (Dynamic AI Confidence)"
-
-        return direction, confidence_str, "Balanced Confluence Confirmed", details
-            
-    except Exception as e:
-        return "STAND BY", "N/A", f"Error: {str(e)}", {}
-
-def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence, entry_time):
-    bot_token = "INSERISCI_QUI_IL_TUO_BOT_TOKEN"
-    chat_id = "INSERISCI_QUI_IL_TUO_CHAT_ID"
-    if bot_token == "INSERISCI_QUI_IL_TUO_BOT_TOKEN":
-        return
-    message = (
-        f"⚡ *AURA PRO SIGNAL* ⚡\n\n"
-        f"🔹 *Asset:* `{display_name}`\n"
-        f"⏰ *Timeframe:* `{timeframe}`\n"
-        f"🎯 *Direction:* *{direction}*\n"
-        f"🕒 *Entry Time:* `{entry_time}`\n"
-        f"📈 *Dynamic Confidence:* `{win_rate}`\n"
-        f"🛡️ *Status:* `{confidence}`\n"
-        f"💰 *Risk Management:* `1% Fixed Capital`"
-    )
-    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-    payload = {"chat_id": chat_id, "text": message, "parse_mode": "Markdown"}
-    try:
-        requests.post(url, json=payload, timeout=3)
-    except Exception:
-        pass
-
-if "signal_active_snp" not in st.session_state: st.session_state.signal_active_snp = False
-if "scanner_results" not in st.session_state: st.session_state.scanner_results = []
-if "cached_asset_display_snp" not in st.session_state: st.session_state.cached_asset_display_snp = None
-if "cached_tf_choice_snp" not in st.session_state: st.session_state.cached_tf_choice_snp = None
-if "cached_tf_seconds_snp" not in st.session_state: st.session_state.cached_tf_seconds_snp = None
-if "cached_direction_snp" not in st.session_state: st.session_state.cached_direction_snp = None
-if "cached_win_rate_snp" not in st.session_state: st.session_state.cached_win_rate_snp = None
-if "cached_time_snp" not in st.session_state: st.session_state.cached_time_snp = None
-if "cached_confidence_snp" not in st.session_state: st.session_state.cached_confidence_snp = None
-if "cached_details_snp" not in st.session_state: st.session_state.cached_details_snp = {}
-
-if st.button("🚀 RUN SCANNER / ANALYSIS"):
-    if mercato_tipo == "🚀 Scanner Globale (Valute Verificate)":
-        st.session_state.scanner_results = []
-        combined_dict = {**forex_dict, **otc_dict}
-        
-        progress_bar = st.progress(0)
-        total_items = len(combined_dict)
-        i = 0
-        
-        for name, data in combined_dict.items():
-            direction, win_rate, conf, details = ultimate_institutional_analysis(data["symbol"], tf_choice)
-            if "STAND BY" not in direction:
-                st.session_state.scanner_results.append({
-                    "asset": name,
-                    "direction": direction,
-                    "confidence": win_rate,
-                    "rsi": details.get("RSI", "N/A"),
-                    "entry_time": get_next_candle_time(tf_seconds)
-                })
-            i += 1
-            progress_bar.progress(i / total_items)
-            
-        progress_bar.empty()
-        st.session_state.signal_active_snp = True
-    else:
-        direction, win_rate, confidence, details = ultimate_institutional_analysis(selected_asset, tf_choice)
-        st.session_state.cached_direction_snp = direction
-        st.session_state.cached_win_rate_snp = win_rate
-        st.session_state.cached_confidence_snp = confidence
-        st.session_state.cached_time_snp = get_next_candle_time(tf_seconds)
-        st.session_state.cached_asset_display_snp = selected_display
-        st.session_state.cached_tf_choice_snp = tf_choice
-        st.session_state.cached_tf_seconds_snp = tf_seconds
-        st.session_state.cached_details_snp = details
-        st.session_state.signal_active_snp = True
-            
-        if "STAND BY" not in direction:
-            send_telegram_alert(
-                selected_display, 
-                tf_choice, 
-                st.session_state.cached_direction_snp, 
-                st.session_state.cached_win_rate_snp, 
-                st.session_state.cached_confidence_snp, 
-                st.session_state.cached_time_snp
-            )
-
-if st.session_state.signal_active_snp:
-    if mercato_tipo == "🚀 Scanner Globale (Valute Verificate)":
-        st.success("Scanner completato!")
-        st.markdown("### 🎯 VALUTE CON SEGNALE ATTIVO")
-        if len(st.session_state.scanner_results) > 0:
-            for res in st.session_state.scanner_results:
-                st.markdown(f"""
-                <div class="analysis-box">
-                    <h4>{res['asset']} &rarr; <b>{res['direction']}</b></h4>
-                    <p><b>Confidence:</b> {res['confidence']} | <b>RSI:</b> {res['rsi']} | <b>Entry:</b> {res['entry_time']}</p>
-                </div>
-                """, unsafe_allow_html=True)
-        else:
-            st.markdown("""
-            <div class="standby-box">
-                <h4>🛑 NESSUN SEGNALE AL MOMENTO</h4>
-                <p>Nessuna valuta ha superato i filtri di confluenza in questo timeframe. Il mercato è in perfetto equilibrio.</p>
-            </div>
-            """, unsafe_allow_html=True)
-    else:
-        st.success("Analysis complete!")
-        st.markdown("### SIGNAL RESULT")
-        st.markdown(f"""
-        * **Asset:** `{st.session_state.cached_asset_display_snp}`
-        * **Timeframe:** `{st.session_state.cached_tf_choice_snp}`
-        * **Signal Direction:** **{st.session_state.cached_direction_snp}**
-        * **Entry Time (Candle Close):** `{st.session_state.cached_time_snp}`
-        * **Dynamic AI Confidence:** `{st.session_state.cached_win_rate_snp}`
-        * **Filter Status:** `{st.session_state.cached_confidence_snp}`
-        * **Money Management:** `1% Account Capital`
-        """)
-        
-        details = st.session_state.cached_details_snp
-        if details:
-            if "STAND BY" in st.session_state.cached_direction_snp:
-                st.markdown(f"""
-                <div class="standby-box">
-                    <h4>🛑 STAND BY: MERCATO IN EQUILIBRIO</h4>
-                    <p>Nessuna spinta direzionale forte rilevata al momento.</p>
-                    <hr style="border-color: #ff4444;">
-                    <p style="color: #ffffff; text-align: left;"><b>RSI:</b> {details.get('RSI', 'N/A')}</p>
-                    <p style="color: #ffffff; text-align: left;"><b>Trend Breve:</b> {details.get('Trend Breve (EMA 9/21)', 'N/A')}</p>
-                    <p style="color: #ffffff; text-align: left;"><b>Bollinger:</b> {details.get('Bollinger Position', 'N/A')}</p>
-                    <p style="color: #ffffff; text-align: left;"><b>MACD:</b> {details.get('MACD Cross', 'N/A')}</p>
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.markdown(f"""
-                <div class="analysis-box">
-                    <h4>🎯 SIGNAL CONFLUENCE ALIGNED</h4>
-                    <p><b>RSI (14):</b> {details.get('RSI', 'N/A')}</p>
-                    <p><b>Trend Breve:</b> {details.get('Trend Breve (EMA 9/21)', 'N/A')}</p>
-                    <p><b>Posizione Bollinger:</b> {details.get('Bollinger Position', 'N/A')}</p>
-                    <p><b>Momento MACD:</b> {details.get('MACD Cross', 'N/A')}</p>
-                </div>
-                """, unsafe_allow_html=True)
-
-        st.markdown("### ⏳ Current Candle Countdown")
-        initial_left = get_seconds_to_next_candle(st.session_state.cached_tf_seconds_snp)
-        
-        timer_html = f"""
-        <div style="font-size: 28px; font-weight: bold; color: #00ffcc; text-align: center; background-color: #1f1f1f; padding: 15px; border-radius: 8px; border: 1px solid #333333;" id="countdown_snp">
-            Loading timer...
-        </div>
-        <script>
-        var timeLeftSnp = {initial_left};
-        function updateTimerSnp() {{
-            if (timeLeftSnp <= 0) {{
-                document.getElementById("countdown_snp").innerHTML = "⏰ CANDELA CHIUSA!";
-                document.getElementById("countdown_snp").style.color = "#ff4444";
-                return;
-            }}
-            var minutes = Math.floor(timeLeftSnp / 60);
-            var seconds = timeLeftSnp % 60;
-            minutes = minutes < 10 ? "0" + minutes : minutes;
-            seconds = seconds < 10 ? "0" + seconds : seconds;
-            document.getElementById("countdown_snp").innerHTML = "⏱️ " + minutes + ":" + seconds;
-            timeLeftSnp--;
-        }}
-        setInterval(updateTimerSnp, 1000);
-        updateTimerSnp();
-        </script>
-        """
-        components.html(timer_html, height=80)
+        confidence_str = f"{final_score:.1f
