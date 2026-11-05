@@ -405,12 +405,10 @@ if st.session_state.signal_active_snp:
         st.markdown("### ⏳ Current Candle Countdown")
         initial_left = get_seconds_to_next_candle(st.session_state.cached_tf_seconds_snp)
         
-        timer_html = f"""
-        <div style="font-size: 28px; font-weight: bold; color: #00ffcc; text-align: center; background-color: #1f1f1f; padding: 15px; border-radius: 8px; border: 1px solid #333333;" id="countdown_snp">
-            Loading timer...
-        </div>
-        <script>
-        var timeLeftSnp = {initial_left};
-        function updateTimerSnp() {{
-            if (timeLeftSnp <= 0) {{
-                            
+        # Timer HTML corretto senza f-string multilinea per evitare errori di sintassi
+        timer_html = (
+            '<div style="font-size: 28px; font-weight: bold; color: #00ffcc; text-align: center; '
+            'background-color: #1f1f1f; padding: 15px; border-radius: 8px; border: 1px solid #333333;" '
+            'id="countdown_snp">Loading timer...</div>'
+            '<script>'
+            f'var timeLeftS                        
