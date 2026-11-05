@@ -18,7 +18,6 @@ st.markdown(
     .main { background-color: #121212; color: #ffffff; }
     .stButton>button { width: 100%; border-radius: 8px; font-weight: bold; background-color: #1f1f1f; color: #00ffcc; border: 1px solid #333333; }
     .stButton>button:hover { background-color: #333333; color: #ffffff; border-color: #00ffcc; }
-    .market-badge { background-color: #1f1f1f; padding: 8px 12px; border-radius: 6px; border: 1px solid #333333; font-size: 14px; margin-bottom: 15px; text-align: center; }
     .analysis-box { background-color: #1a1a1a; padding: 15px; border-radius: 8px; border: 1px solid #00ffcc; margin-top: 15px; }
     .standby-box { background-color: #1a1a1a; padding: 15px; border-radius: 8px; border: 1px solid #ff4444; margin-top: 15px; text-align: center; color: #ff4444; font-weight: bold; }
     </style>
@@ -95,21 +94,6 @@ if mercato_tipo != "🚀 Scanner Globale (Precisione Live)":
         selected_display = st.selectbox("Select Crypto OTC Asset", list(crypto_otc_dict.keys()), key="snp_asset_crypto")
         selected_asset = crypto_otc_dict[selected_display]["symbol"]
 
-def get_market_sessions():
-    utc_hour = datetime.utcnow().hour
-    active = []
-    if 0 <= utc_hour < 9:
-        active.append("Tokyo 🟢")
-    if 8 <= utc_hour < 16:
-        active.append("London 🟢 (Killzone)")
-    if 13 <= utc_hour < 21:
-        active.append("New York 🟢 (Killzone)")
-    if not active:
-        return "Low Liquidity / Off-Killzone 🌙"
-    return " | ".join(active)
-
-st.markdown(f'<div class="market-badge">🌐 <b>Market Sessions:</b> {get_market_sessions()}</div>', unsafe_allow_html=True)
-
 st.markdown("### ⏰ Timeframe")
 scadenze = {
     "M1 (60s)": 60,
@@ -126,13 +110,14 @@ def get_seconds_to_next_candle(seconds):
     total_secs = now.hour * 3600 + now.minute * 60 + now.second + now.microsecond / 1_000_000
     rem = total_secs % seconds
     sec_to_wait = seconds - rem
-    return max(1, int(sec_to_wait))
+    return max(1, int(round(sec_to_wait)))
 
 def get_next_candle_time(seconds):
     now = datetime.now()
     secs_left = get_seconds_to_next_candle(seconds)
     target_time = now + timedelta(seconds=secs_left)
-    # Arrotonda esattamente al secondo pulito per la chiusura candela
+    # Arrotondamento pulito al secondo esatto
+    target_time = target_time.replace(microsecond=0)
     return target_time.strftime("%H:%M:%S")
 
 def ultimate_institutional_analysis(ticker, timeframe_choice, tf_sec):
@@ -190,10 +175,9 @@ def ultimate_institutional_analysis(ticker, timeframe_choice, tf_sec):
         else:
             return "STAND BY / NO TRADE", "N/A", "Market in Equilibrium", details
 
-        # CALCOLO REALE E DINAMICO DELLA CONFIDENZA IN BASE AGLI INDICATORI
+        # CALCOLO REALE E DINAMICO DELLA CONFIDENZA
         base_score = 75.0
         if "BUY" in direction:
-            # Più l'RSI è basso (profondo in ipervenduto), più sale la confidenza reale
             rsi_bonus = max(0.0, (48.0 - current_rsi) * 0.8)
             base_score += rsi_bonus
             if curr_price <= curr_lower * 1.005:
@@ -201,7 +185,6 @@ def ultimate_institutional_analysis(ticker, timeframe_choice, tf_sec):
             if is_bullish_trend:
                 base_score += 5.0
         else:
-            # Più l'RSI è alto (profondo in ipercomprato), più sale la confidenza reale
             rsi_bonus = max(0.0, (current_rsi - 52.0) * 0.8)
             base_score += rsi_bonus
             if curr_price >= curr_upper * 0.995:
