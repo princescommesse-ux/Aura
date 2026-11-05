@@ -142,23 +142,14 @@ def ultimate_institutional_analysis(ticker, timeframe_choice):
         iv = interval_map.get(timeframe_choice, "1m")
         
         df = yf.download(ticker, period="1d", interval=iv, progress=False)
-        if df.empty or len(df) < 30:
+        if df.empty or len(df) < 20:
             return "STAND BY", "N/A", "Insufficient Market Data", {}
 
         high = df['High']
         low = df['Low']
         close = df['Close']
         
-        # Filtro Volatilità ATR
-        tr1 = high - low
-        tr2 = (high - close.shift()).abs()
-        tr3 = (low - close.shift()).abs()
-        true_range = max(tr1, tr2, tr3) if isinstance(tr1, float) else pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
-        atr = true_range.rolling(window=14).mean()
-        current_atr = float(atr.iloc[-1].item()) if not atr.empty else 0.0
-        is_volatility_active = current_atr > 0.0001
-        
-        # Calcolo RSI
+        # Calcolo RSI (14)
         delta = close.diff()
         gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
@@ -166,12 +157,12 @@ def ultimate_institutional_analysis(ticker, timeframe_choice):
         rsi = 100 - (100 / (1 + rs))
         current_rsi = float(rsi.iloc[-1].item())
         
-        # Trend EMA
+        # Medie Mobili ed EMA
         ema9 = close.ewm(span=9, adjust=False).mean()
         ema21 = close.ewm(span=21, adjust=False).mean()
         is_bullish_trend = float(ema9.iloc[-1].item()) > float(ema21.iloc[-1].item())
         
-        # Bollinger Bands
+        # Bande di Bollinger
         sma20 = close.rolling(window=20).mean()
         std20 = close.rolling(window=20).std()
         upper_band = sma20 + (std20 * 2)
@@ -179,37 +170,26 @@ def ultimate_institutional_analysis(ticker, timeframe_choice):
         curr_price = float(close.iloc[-1].item())
         curr_lower = float(lower_band.iloc[-1].item())
         curr_upper = float(upper_band.iloc[-1].item())
-        
-        # MACD
-        exp12 = close.ewm(span=12, adjust=False).mean()
-        exp26 = close.ewm(span=26, adjust=False).mean()
-        macd = exp12 - exp26
-        signal_line = macd.ewm(span=9, adjust=False).mean()
-        is_macd_bullish = float(macd.iloc[-1].item()) > float(signal_line.iloc[-1].item())
 
         details = {
             "RSI": f"{current_rsi:.1f}",
-            "ATR Volatilità": "OK 🟢" if is_volatility_active else "Bassa 🔴",
-            "Trend EMA": "BULLISH 🟢" if is_bullish_trend else "BEARISH 🔴",
-            "Bollinger": "Near Lower Support" if curr_price <= curr_lower * 1.005 else ("Near Upper Resistance" if curr_price >= curr_upper * 0.995 else "Mid-Channel"),
-            "MACD Cross": "BULLISH 🟢" if is_macd_bullish else "BEARISH 🔴"
+            "Trend Breve (EMA)": "BULLISH 🟢" if is_bullish_trend else "BEARISH 🔴",
+            "Bollinger Position": "Near Lower Support" if curr_price <= curr_lower * 1.01 else ("Near Upper Resistance" if curr_price >= curr_upper * 0.99 else "Mid-Channel")
         }
 
-        # SOGLIE RIGIDE E SELETTIVE (Eliminazione falsi segnali)
-        # Il BUY scatta solo se RSI <= 35 (ipervenduto forte) + Trend e MACD rialzisti
-        if current_rsi <= 35 and is_bullish_trend and is_macd_bullish and is_volatility_active:
+        # Logica bilanciata e reattiva su tutti i timeframe
+        if current_rsi <= 48 and (is_bullish_trend or curr_price <= curr_lower * 1.01):
             direction = "BUY 🟢"
-        # Il SELL scatta solo se RSI >= 65 (ipercomprato forte) + Trend e MACD ribassisti
-        elif current_rsi >= 65 and (not is_bullish_trend) and (not is_macd_bullish) and is_volatility_active:
+        elif current_rsi >= 52 and (not is_bullish_trend or curr_price >= curr_upper * 0.99):
             direction = "SELL 🔴"
         else:
-            return "STAND BY / NO TRADE", "N/A", "Market filtered (High Precision Mode)", details
+            return "STAND BY / NO TRADE", "N/A", "Market in Equilibrium", details
 
-        score = 85.0
-        final_score = min(score, 98.0)
-        confidence_str = f"{final_score:.1f}% (Strict Institutional Filter)"
+        score = 75.0
+        final_score = min(score, 95.0)
+        confidence_str = f"{final_score:.1f}% (Optimized Signal)"
 
-        return direction, confidence_str, "Elite Confluence Verified", details
+        return direction, confidence_str, "Confluence Verified", details
             
     except Exception as e:
         return "STAND BY", "N/A", f"Error: {str(e)}", {}
@@ -298,7 +278,7 @@ if st.button("🚀 RUN SCANNER / ANALYSIS"):
 if st.session_state.signal_active_snp:
     if mercato_tipo == "🚀 Scanner Globale (Precisione Live)":
         st.success("Scanner completato!")
-        st.markdown("### 🎯 VALUTE CON SEGNALE ATTIVO (FILTRO STRICT)")
+        st.markdown("### 🎯 VALUTE CON SEGNALE ATTIVO")
         if len(st.session_state.scanner_results) > 0:
             for res in st.session_state.scanner_results:
                 st.markdown(f"""
@@ -310,8 +290,8 @@ if st.session_state.signal_active_snp:
         else:
             st.markdown("""
             <div class="standby-box">
-                <h4>🛑 NESSUN SEGNALE (MERCATO FILTRATO)</h4>
-                <p>Nessun asset rispetta i rigidi criteri di ipercomprato/ipervenduto istituzionale. Meglio attendere.</p>
+                <h4>🛑 NESSUN SEGNALE IN QUESTO MOMENTO</h4>
+                <p>Riprova tra qualche istante o cambia timeframe.</p>
             </div>
             """, unsafe_allow_html=True)
     else:
@@ -331,23 +311,21 @@ if st.session_state.signal_active_snp:
             if "STAND BY" in st.session_state.cached_direction_snp:
                 st.markdown(f"""
                 <div class="standby-box">
-                    <h4>🛑 STAND BY: FILTRI RIGIDI ATTIVI</h4>
-                    <p>Il mercato non offre un'opportunità pulita (evitati falsi segnali).</p>
+                    <h4>🛑 STAND BY: MERCATO IN EQUILIBRIO</h4>
+                    <p>Nessuna spinta direzionale forte rilevata al momento.</p>
                     <hr style="border-color: #ff4444;">
-                    <p style="color: #ffffff; text-align: left;"><b>RSI (Soglia 35/65):</b> {details.get('RSI', 'N/A')}</p>
-                    <p style="color: #ffffff; text-align: left;"><b>ATR Volatilità:</b> {details.get('ATR Volatilità', 'N/A')}</p>
-                    <p style="color: #ffffff; text-align: left;"><b>Trend EMA:</b> {details.get('Trend EMA', 'N/A')}</p>
-                    <p style="color: #ffffff; text-align: left;"><b>MACD Cross:</b> {details.get('MACD Cross', 'N/A')}</p>
+                    <p style="color: #ffffff; text-align: left;"><b>RSI:</b> {details.get('RSI', 'N/A')}</p>
+                    <p style="color: #ffffff; text-align: left;"><b>Trend Breve:</b> {details.get('Trend Breve (EMA)', 'N/A')}</p>
+                    <p style="color: #ffffff; text-align: left;"><b>Bollinger:</b> {details.get('Bollinger Position', 'N/A')}</p>
                 </div>
                 """, unsafe_allow_html=True)
             else:
                 st.markdown(f"""
                 <div class="analysis-box">
-                    <h4>🎯 ELITE CONFLUENCE ALIGNED</h4>
-                    <p><b>RSI:</b> {details.get('RSI', 'N/A')}</p>
-                    <p><b>Volatilità ATR:</b> {details.get('ATR Volatilità', 'N/A')}</p>
-                    <p><b>Trend EMA:</b> {details.get('Trend EMA', 'N/A')}</p>
-                    <p><b>Momento MACD:</b> {details.get('MACD Cross', 'N/A')}</p>
+                    <h4>🎯 SIGNAL CONFLUENCE ALIGNED</h4>
+                    <p><b>RSI (14):</b> {details.get('RSI', 'N/A')}</p>
+                    <p><b>Trend Breve:</b> {details.get('Trend Breve (EMA)', 'N/A')}</p>
+                    <p><b>Posizione Bollinger:</b> {details.get('Bollinger Position', 'N/A')}</p>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -363,7 +341,7 @@ if st.session_state.signal_active_snp:
         function updateTimerSnp() {{
             if (timeLeftSnp <= 0) {{
                 document.getElementById("countdown_snp").innerHTML = "⏰ CANDELA CHIUSA!";
-                document.getElementById("countdown_snp">style.color = "#ff4444";
+                document.getElementById("countdown_snp").style.color = "#ff4444";
                 return;
             }}
             var minutes = Math.floor(timeLeftSnp / 60);
