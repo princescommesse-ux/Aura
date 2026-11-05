@@ -28,8 +28,8 @@ st.markdown(
 
 st.title("⚡ AURA PRO ⚡")
 
-# Selezione della Tipologia di Mercato
-mercato_tipo = st.radio("Seleziona Mercato:", ["Forex Reale (20 coppie)", "Asset OTC Valute", "Crypto OTC", "Azioni OTC"], horizontal=True)
+# Selezione della Tipologia di Mercato (Azioni OTC rimosse per evitare dati statici/bloccati)
+mercato_tipo = st.radio("Seleziona Mercato:", ["Forex Reale (20 coppie)", "Asset OTC Valute", "Crypto OTC"], horizontal=True)
 
 # 20 coppie Forex Reali
 forex_dict = {
@@ -133,46 +133,15 @@ crypto_otc_dict = {
     "🔴 TRON OTC": {"symbol": "TRX-USD"}
 }
 
-# Lista pulita delle Azioni OTC
-stocks_otc_dict = {
-    "💳 American Express OTC": {"symbol": "AXP"},
-    "💊 Johnson & Johnson OTC": {"symbol": "JNJ"},
-    "💻 Microsoft OTC": {"symbol": "MSFT"},
-    "🧪 Pfizer Inc OTC": {"symbol": "PFE"},
-    "🪙 Coinbase Global OTC": {"symbol": "COIN"},
-    "📦 FedEx OTC": {"symbol": "FDX"},
-    "📊 VIX OTC": {"symbol": "^VIX"},
-    "🍎 Apple OTC": {"symbol": "AAPL"},
-    "🔌 Cisco OTC": {"symbol": "CSCO"},
-    "🚗 Tesla OTC": {"symbol": "TSLA"},
-    "🛢️ ExxonMobil OTC": {"symbol": "XOM"},
-    "⛏️ Marathon Digital Holdings OTC": {"symbol": "MARA"},
-    "💳 VISA OTC": {"symbol": "V"},
-    "🏦 Citigroup Inc OTC": {"symbol": "C"},
-    "🍿 Netflix OTC": {"symbol": "NFLX"},
-    "💻 Intel OTC": {"symbol": "INTC"},
-    "🍟 McDonald's OTC": {"symbol": "MCD"},
-    "👁️ Palantir Technologies OTC": {"symbol": "PLTR"},
-    "✈️ Boeing Company OTC": {"symbol": "BA"},
-    "📦 Amazon OTC": {"symbol": "AMZN"},
-    "📱 Advanced Micro Devices OTC": {"symbol": "AMD"},
-    "👥 FACEBOOK INC OTC": {"symbol": "META"},
-    "🛒 Alibaba OTC": {"symbol": "BABA"},
-    "🎮 GameStop Corp OTC": {"symbol": "GME"}
-}
-
 if mercato_tipo == "Forex Reale (20 coppie)":
     selected_display = st.selectbox("Select Currency Pair", list(forex_dict.keys()), key="snp_asset_forex")
     selected_asset = forex_dict[selected_display]["symbol"]
 elif mercato_tipo == "Asset OTC Valute":
     selected_display = st.selectbox("Select OTC Asset", list(otc_dict.keys()), key="snp_asset_otc")
     selected_asset = otc_dict[selected_display]["symbol"]
-elif mercato_tipo == "Crypto OTC":
+else:
     selected_display = st.selectbox("Select Crypto OTC Asset", list(crypto_otc_dict.keys()), key="snp_asset_crypto")
     selected_asset = crypto_otc_dict[selected_display]["symbol"]
-else:
-    selected_display = st.selectbox("Select Stock OTC Asset", list(stocks_otc_dict.keys()), key="snp_asset_stocks")
-    selected_asset = stocks_otc_dict[selected_display]["symbol"]
 
 def get_market_sessions():
     utc_hour = datetime.utcnow().hour
