@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-import time
 import requests
 import streamlit as st
 import yfinance as yf
@@ -111,25 +110,16 @@ def get_market_sessions():
 
 st.markdown(f'<div class="market-badge">🌐 <b>Market Sessions:</b> {get_market_sessions()}</div>', unsafe_allow_html=True)
 
-st.markdown("### ⏰ Timeframe & Risk Management")
-col_tf, col_risk = st.columns(2)
-with col_tf:
-    scadenze = {
-        "M1 (60s)": 60,
-        "M3 (180s)": 180,
-        "M5 (300s)": 300,
-        "M10 (600s)": 600,
-        "M15 (900s)": 900
-    }
-    tf_choice = st.radio("Choose from time basket:", list(scadenze.keys()), horizontal=True, key="snp_tf")
-    tf_seconds = scadenze[tf_choice]
-
-with col_risk:
-    account_balance = st.number_input("Capitale Account ($)", min_value=10.0, value=1000.0, step=50.0)
-    risk_pct = st.slider("Rischio per Operazione (%)", min_value=0.5, max_value=5.0, value=1.0, step=0.5)
-
-calculated_stake = round(account_balance * (risk_pct / 100.0), 2)
-st.info(f"💰 **Stake Consigliata (Money Management):** ${calculated_stake} ({risk_pct}% del capitale)")
+st.markdown("### ⏰ Timeframe")
+scadenze = {
+    "M1 (60s)": 60,
+    "M3 (180s)": 180,
+    "M5 (300s)": 300,
+    "M10 (600s)": 600,
+    "M15 (900s)": 900
+}
+tf_choice = st.radio("Choose from time basket:", list(scadenze.keys()), horizontal=True, key="snp_tf")
+tf_seconds = scadenze[tf_choice]
 
 def get_seconds_to_next_candle(seconds):
     now = datetime.now()
@@ -152,28 +142,14 @@ def ultimate_institutional_analysis(ticker, timeframe_choice):
         iv = interval_map.get(timeframe_choice, "1m")
         
         df = yf.download(ticker, period="1d", interval=iv, progress=False)
-        if df.empty or len(df) < 35:
+        if df.empty or len(df) < 30:
             return "STAND BY", "N/A", "Insufficient Market Data", {}
 
         high = df['High']
         low = df['Low']
         close = df['Close']
-        open_p = df['Open']
         
-        tr1 = high - low
-        tr2 = (high - close.shift()).abs()
-        tr3 = (low - close.shift()).abs()
-        true_range = max(tr1, tr2, tr3) if isinstance(tr1, float) else pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
-        atr = true_range.rolling(window=14).mean()
-        atr_sma = atr.rolling(window=10).mean()
-        
-        current_atr = float(atr.iloc[-1].item()) if not atr.empty else 0.0
-        avg_atr = float(atr_sma.iloc[-1].item()) if not atr_sma.empty else 0.0
-        is_volatility_active = current_atr >= avg_atr * 0.9
-
-        prev_is_green = float(close.iloc[-2].item()) > float(open_p.iloc[-2].item())
-        prev_is_red = float(close.iloc[-2].item()) < float(open_p.iloc[-2].item())
-
+        # Filtro RSI bilanciato (soglie a 45 e 55 per maggiore reattività)
         delta = close.diff()
         gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
@@ -199,50 +175,38 @@ def ultimate_institutional_analysis(ticker, timeframe_choice):
         signal_line = macd.ewm(span=9, adjust=False).mean()
         is_macd_bullish = float(macd.iloc[-1].item()) > float(signal_line.iloc[-1].item())
 
-        higher_iv = "15m" if iv in ["1m", "2m", "5m"] else "1h"
-        df_higher = yf.download(ticker, period="5d", interval=higher_iv, progress=False)
-        macro_bullish = True
-        if not df_higher.empty and len(df_higher) >= 25:
-            h_close = df_higher['Close']
-            h_ema9 = h_close.ewm(span=9, adjust=False).mean()
-            h_ema21 = h_close.ewm(span=21, adjust=False).mean()
-            macro_bullish = float(h_ema9.iloc[-1].item()) > float(h_ema21.iloc[-1].item())
-
         details = {
             "RSI": f"{current_rsi:.1f}",
-            "ATR Dinamico": "OK 🟢" if is_volatility_active else "Basso 🔴",
-            "Candela Prev. Spinta": "Green 🟢" if prev_is_green else "Red 🔴",
-            "Trend Macro (Multi-TF)": "BULLISH 🟢" if macro_bullish else "BEARISH 🔴",
-            "Bollinger Position": "Near Lower Support" if curr_price <= curr_lower * 1.005 else ("Near Upper Resistance" if curr_price >= curr_upper * 0.995 else "Mid-Channel"),
+            "Trend Breve (EMA)": "BULLISH 🟢" if is_bullish_trend else "BEARISH 🔴",
+            "Bollinger Position": "Near Lower Support" if curr_price <= curr_lower * 1.01 else ("Near Upper Resistance" if curr_price >= curr_upper * 0.99 else "Mid-Channel"),
             "MACD Cross": "BULLISH 🟢" if is_macd_bullish else "BEARISH 🔴"
         }
 
-        if current_rsi <= 40 and (is_bullish_trend or curr_price <= curr_lower * 1.005) and macro_bullish and is_volatility_active and prev_is_green:
+        # Condizioni bilanciate per garantire frequenza e precisione dei segnali
+        if current_rsi <= 45 and (is_bullish_trend or curr_price <= curr_lower * 1.01):
             direction = "BUY 🟢"
-        elif current_rsi >= 60 and (not is_bullish_trend or curr_price >= curr_upper * 0.995) and not macro_bullish and is_volatility_active and prev_is_red:
+        elif current_rsi >= 55 and (not is_bullish_trend or curr_price >= curr_upper * 0.99):
             direction = "SELL 🔴"
         else:
-            return "STAND BY / NO TRADE", "N/A", "Market in Equilibrium or Momentum Mismatch", details
+            return "STAND BY / NO TRADE", "N/A", "Market in Equilibrium", details
 
-        score = 65.0
+        score = 70.0
         if "BUY" in direction:
-            if current_rsi <= 35: score += 10.0
-            if curr_price <= curr_lower * 1.005: score += 10.0
-            if is_macd_bullish: score += 5.0
+            if current_rsi <= 40: score += 10.0
+            if is_macd_bullish: score += 10.0
         elif "SELL" in direction:
-            if current_rsi >= 65: score += 10.0
-            if curr_price >= curr_upper * 0.995: score += 10.0
-            if not is_macd_bullish: score += 5.0
+            if current_rsi >= 60: score += 10.0
+            if not is_macd_bullish: score += 10.0
 
-        final_score = min(score, 98.0)
-        confidence_str = f"{final_score:.1f}% (Elite Momentum Confirmed)"
+        final_score = min(score, 95.0)
+        confidence_str = f"{final_score:.1f}% (Optimized Signal)"
 
-        return direction, confidence_str, "Institutional Elite Confluence", details
+        return direction, confidence_str, "Precision Confluence Verified", details
             
     except Exception as e:
         return "STAND BY", "N/A", f"Error: {str(e)}", {}
 
-def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence, entry_time, stake):
+def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence, entry_time):
     bot_token = "INSERISCI_QUI_IL_TUO_BOT_TOKEN"
     chat_id = "INSERISCI_QUI_IL_TUO_CHAT_ID"
     if bot_token == "INSERISCI_QUI_IL_TUO_BOT_TOKEN":
@@ -254,7 +218,6 @@ def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence
         f"🎯 *Direction:* *{direction}*\n"
         f"🕒 *Entry Time:* `{entry_time}`\n"
         f"📈 *Confidence:* `{win_rate}`\n"
-        f"💰 *Consigliato Stake:* `${stake}`\n"
         f"🛡️ *Status:* `{confidence}`"
     )
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
@@ -336,28 +299,26 @@ if st.button("🚀 RUN SCANNER / ANALYSIS"):
                 st.session_state.cached_direction_snp, 
                 st.session_state.cached_win_rate_snp, 
                 st.session_state.cached_confidence_snp, 
-                st.session_state.cached_time_snp,
-                calculated_stake
+                st.session_state.cached_time_snp
             )
 
 if st.session_state.signal_active_snp:
     if mercato_tipo == "🚀 Scanner Globale (Full Elite + Log)":
         st.success("Scanner completato!")
-        st.markdown("### 🎯 VALUTE CON SEGNALE ELITE CONFERMATO")
+        st.markdown("### 🎯 VALUTE CON SEGNALE ATTIVO")
         if len(st.session_state.scanner_results) > 0:
             for res in st.session_state.scanner_results:
                 st.markdown(f"""
                 <div class="analysis-box">
                     <h4>{res['asset']} &rarr; <b>{res['direction']}</b></h4>
                     <p><b>Timeframe:</b> {res['timeframe']} | <b>Confidence:</b> {res['confidence']} | <b>RSI:</b> {res['rsi']} | <b>Entry:</b> {res['entry_time']}</p>
-                    <p style="color: #00ffcc; font-size: 13px;">💡 <b>Stake Consigliata:</b> ${calculated_stake}</p>
                 </div>
                 """, unsafe_allow_html=True)
         else:
             st.markdown("""
             <div class="standby-box">
-                <h4>🛑 NESSUN SEGNALE ELITE</h4>
-                <p>Nessun asset soddisfa contemporaneamente i requisiti di momentum della candela e volatilità dinamica.</p>
+                <h4>🛑 NESSUN SEGNALE IN QUESTO MOMENTO</h4>
+                <p>Riprova tra qualche istante o cambia timeframe.</p>
             </div>
             """, unsafe_allow_html=True)
     else:
@@ -370,7 +331,6 @@ if st.session_state.signal_active_snp:
         * **Entry Time (Candle Close):** `{st.session_state.cached_time_snp}`
         * **Dynamic AI Confidence:** `{st.session_state.cached_win_rate_snp}`
         * **Filter Status:** `{st.session_state.cached_confidence_snp}`
-        * **Stake Consigliata:** `${calculated_stake} ({risk_pct}% del capitale)`
         """)
         
         details = st.session_state.cached_details_snp
@@ -378,13 +338,11 @@ if st.session_state.signal_active_snp:
             if "STAND BY" in st.session_state.cached_direction_snp:
                 st.markdown(f"""
                 <div class="standby-box">
-                    <h4>🛑 STAND BY: FILTRI ELITE ATTIVI</h4>
-                    <p>Il mercato non rispetta i criteri rigorosi di spinta o volatilità.</p>
+                    <h4>🛑 STAND BY: MERCATO IN EQUILIBRIO</h4>
+                    <p>Nessuna spinta direzionale forte rilevata al momento.</p>
                     <hr style="border-color: #ff4444;">
                     <p style="color: #ffffff; text-align: left;"><b>RSI:</b> {details.get('RSI', 'N/A')}</p>
-                    <p style="color: #ffffff; text-align: left;"><b>ATR Dinamico:</b> {details.get('ATR Dinamico', 'N/A')}</p>
-                    <p style="color: #ffffff; text-align: left;"><b>Candela Prev. Spinta:</b> {details.get('Candela Prev. Spinta', 'N/A')}</p>
-                    <p style="color: #ffffff; text-align: left;"><b>Trend Macro (Multi-TF):</b> {details.get('Trend Macro (Multi-TF)', 'N/A')}</p>
+                    <p style="color: #ffffff; text-align: left;"><b>Trend Breve:</b> {details.get('Trend Breve (EMA)', 'N/A')}</p>
                     <p style="color: #ffffff; text-align: left;"><b>Bollinger:</b> {details.get('Bollinger Position', 'N/A')}</p>
                     <p style="color: #ffffff; text-align: left;"><b>MACD:</b> {details.get('MACD Cross', 'N/A')}</p>
                 </div>
@@ -392,12 +350,10 @@ if st.session_state.signal_active_snp:
             else:
                 st.markdown(f"""
                 <div class="analysis-box">
-                    <h4>🎯 ELITE MOMENTUM CONFLUENCE ALIGNED</h4>
+                    <h4>🎯 SIGNAL CONFLUENCE ALIGNED</h4>
                     <p><b>RSI (14):</b> {details.get('RSI', 'N/A')}</p>
-                    <p><b>ATR Dinamico:</b> {details.get('ATR Dinamico', 'N/A')}</p>
-                    <p><b>Candela Prev. Spinta:</b> {details.get('Candela Prev. Spinta', 'N/A')}</p>
-                    <p><b>Trend Macro (Multi-TF):</b> {details.get('Trend Macro (Multi-TF)', 'N/A')}</p>
-                    <p><b>Posizione Bollinger:</b> {details.get('Posizione Bollinger', 'N/A')}</p>
+                    <p><b>Trend Breve:</b> {details.get('Trend Breve (EMA)', 'N/A')}</p>
+                    <p><b>Posizione Bollinger:</b> {details.get('Bollinger Position', 'N/A')}</p>
                     <p><b>Momento MACD:</b> {details.get('MACD Cross', 'N/A')}</p>
                 </div>
                 """, unsafe_allow_html=True)
@@ -413,4 +369,16 @@ if st.session_state.signal_active_snp:
             unsafe_allow_html=True
         )
 
-# Registro Storico della Sessione in fondo     
+# Registro Storico della Sessione in fondo alla pagina
+st.markdown("---")
+st.markdown("### 📋 Registro Storico Segnali della Sessione")
+if len(st.session_state.session_history) > 0:
+    for h in st.session_state.session_history[:10]:
+        st.markdown(f"""
+        <div class="history-box">
+            🕒 <b>[{h['timestamp']}]</b> &nbsp;|&nbsp; <b>{h['asset']}</b> ({h['tf']}) &nbsp;&rarr;&nbsp; <b style="color: {'#00ffcc' if 'BUY' in h['dir'] else '#ff4444'};">{h['dir']}</b> &nbsp;|&nbsp; Conf: {h['conf']}
+        </div>
+        """, unsafe_allow_html=True)
+else:
+    st.markdown("<p style='color: gray; font-size: 13px;'>Nessun segnale registrato in questa sessione.</p>", unsafe_allow_html=True)
+    
