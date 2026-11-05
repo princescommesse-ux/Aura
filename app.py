@@ -142,13 +142,14 @@ def ultimate_institutional_analysis(ticker, timeframe_choice):
         iv = interval_map.get(timeframe_choice, "1m")
         
         df = yf.download(ticker, period="1d", interval=iv, progress=False)
-        if df.empty or len(df) < 30:
+        if df.empty or len(df) < 20:
             return "STAND BY", "N/A", "Insufficient Market Data", {}
 
         high = df['High']
         low = df['Low']
         close = df['Close']
         
+        # Calcolo RSI
         delta = close.diff()
         gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
@@ -156,10 +157,12 @@ def ultimate_institutional_analysis(ticker, timeframe_choice):
         rsi = 100 - (100 / (1 + rs))
         current_rsi = float(rsi.iloc[-1].item())
         
+        # Medie Mobili ed EMA
         ema9 = close.ewm(span=9, adjust=False).mean()
         ema21 = close.ewm(span=21, adjust=False).mean()
         is_bullish_trend = float(ema9.iloc[-1].item()) > float(ema21.iloc[-1].item())
         
+        # Bande di Bollinger
         sma20 = close.rolling(window=20).mean()
         std20 = close.rolling(window=20).std()
         upper_band = sma20 + (std20 * 2)
@@ -168,22 +171,38 @@ def ultimate_institutional_analysis(ticker, timeframe_choice):
         curr_lower = float(lower_band.iloc[-1].item())
         curr_upper = float(upper_band.iloc[-1].item())
         
+        # MACD
         exp12 = close.ewm(span=12, adjust=False).mean()
         exp26 = close.ewm(span=26, adjust=False).mean()
         macd = exp12 - exp26
         signal_line = macd.ewm(span=9, adjust=False).mean()
         is_macd_bullish = float(macd.iloc[-1].item()) > float(signal_line.iloc[-1].item())
 
+        # ADATTAMENTO DINAMICO SOGLIE RSI IN BASE AL TIMEFRAME
+        if timeframe_choice in ["M10 (600s)", "M15 (900s)"]:
+            rsi_buy_threshold = 48
+            rsi_sell_threshold = 52
+            bb_factor = 1.015
+        elif timeframe_choice == "M5 (300s)":
+            rsi_buy_threshold = 46
+            rsi_sell_threshold = 54
+            bb_factor = 1.01
+        else: # M1 e M3
+            rsi_buy_threshold = 45
+            rsi_sell_threshold = 55
+            bb_factor = 1.008
+
         details = {
             "RSI": f"{current_rsi:.1f}",
             "Trend Breve (EMA)": "BULLISH 🟢" if is_bullish_trend else "BEARISH 🔴",
-            "Bollinger Position": "Near Lower Support" if curr_price <= curr_lower * 1.01 else ("Near Upper Resistance" if curr_price >= curr_upper * 0.99 else "Mid-Channel"),
+            "Bollinger Position": "Near Lower Support" if curr_price <= curr_lower * bb_factor else ("Near Upper Resistance" if curr_price >= curr_upper * (2 - bb_factor) else "Mid-Channel"),
             "MACD Cross": "BULLISH 🟢" if is_macd_bullish else "BEARISH 🔴"
         }
 
-        if current_rsi <= 45 and (is_bullish_trend or curr_price <= curr_lower * 1.01):
+        # Logica di ingresso ottimizzata
+        if current_rsi <= rsi_buy_threshold and (is_bullish_trend or curr_price <= curr_lower * bb_factor):
             direction = "BUY 🟢"
-        elif current_rsi >= 55 and (not is_bullish_trend or curr_price >= curr_upper * 0.99):
+        elif current_rsi >= rsi_sell_threshold and (not is_bullish_trend or curr_price >= curr_upper * (2 - bb_factor)):
             direction = "SELL 🔴"
         else:
             return "STAND BY / NO TRADE", "N/A", "Market in Equilibrium", details
@@ -197,7 +216,7 @@ def ultimate_institutional_analysis(ticker, timeframe_choice):
             if not is_macd_bullish: score += 10.0
 
         final_score = min(score, 95.0)
-        confidence_str = f"{final_score:.1f}% (Optimized Signal)"
+        confidence_str = f"{final_score:.1f}% (Dynamic TF Aligned)"
 
         return direction, confidence_str, "Precision Confluence Verified", details
             
