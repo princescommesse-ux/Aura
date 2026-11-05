@@ -28,8 +28,8 @@ st.markdown(
 
 st.title("⚡ AURA PRO ⚡")
 
-# Selezione della Tipologia di Mercato
-mercato_tipo = st.radio("Seleziona Mercato:", ["Forex Reale (20 coppie)", "Asset OTC Valute", "Crypto OTC (Top Fluidi)"], horizontal=True)
+# Selezione della Tipologia di Mercato (Azioni OTC rimosse per evitare dati statici/bloccati)
+mercato_tipo = st.radio("Seleziona Mercato:", ["Forex Reale (20 coppie)", "Asset OTC Valute", "Crypto OTC"], horizontal=True)
 
 # 20 coppie Forex Reali
 forex_dict = {
@@ -116,13 +116,21 @@ otc_dict = {
     "🇴🇲🇨🇳 OMR/CNY OTC": {"symbol": "EURUSD=X"}
 }
 
-# Crypto OTC essenziali e super-fluidi
+# Lista pulita delle Criptovalute OTC
 crypto_otc_dict = {
     "₿ Bitcoin OTC": {"symbol": "BTC-USD"},
-    "Ξ Ethereum OTC": {"symbol": "ETH-USD"},
-    "☀️ Solana OTC": {"symbol": "SOL-USD"},
+    "🔴 Polkadot OTC": {"symbol": "DOT-USD"},
     "Ł Litecoin OTC": {"symbol": "LTC-USD"},
-    "🔗 Chainlink OTC": {"symbol": "LINK-USD"}
+    "💎 Toncoin OTC": {"symbol": "TON-USD"},
+    "💜 Polygon OTC": {"symbol": "MATIC-USD"},
+    "🔺 Avalanche OTC": {"symbol": "AVAX-USD"},
+    "Ξ Ethereum OTC": {"symbol": "ETH-USD"},
+    "🔗 Chainlink OTC": {"symbol": "LINK-USD"},
+    "₳ Cardano OTC": {"symbol": "ADA-USD"},
+    "📈 Bitcoin ETF OTC": {"symbol": "IBIT"},
+    "🟡 BNB OTC": {"symbol": "BNB-USD"},
+    "☀️ Solana OTC": {"symbol": "SOL-USD"},
+    "🔴 TRON OTC": {"symbol": "TRX-USD"}
 }
 
 if mercato_tipo == "Forex Reale (20 coppie)":
@@ -215,30 +223,30 @@ def ultimate_institutional_analysis(ticker, timeframe_choice):
         details = {
             "RSI": f"{current_rsi:.1f}",
             "Trend Breve (EMA 9/21)": "BULLISH 🟢" if is_bullish_trend else "BEARISH 🔴",
-            "Bollinger Position": "Near Lower Support" if curr_price <= curr_lower * 1.005 else ("Near Upper Resistance" if curr_price >= curr_upper * 0.995 else "Mid-Channel"),
+            "Bollinger Position": "At Lower Support" if curr_price <= curr_lower * 1.002 else ("At Upper Resistance" if curr_price >= curr_upper * 0.998 else "Mid-Channel"),
             "MACD Cross": "BULLISH 🟢" if is_macd_bullish else "BEARISH 🔴"
         }
 
-        # SOGLIE ALLEGGERITE: RSI a 40/60 e Bollinger leggermente più elastico
-        if current_rsi <= 40 and (is_bullish_trend or curr_price <= curr_lower * 1.005):
+        # Logica di Segnale
+        if current_rsi <= 38 and (is_bullish_trend or curr_price <= curr_lower):
             direction = "BUY 🟢"
-        elif current_rsi >= 60 and (not is_bullish_trend or curr_price >= curr_upper * 0.995):
+        elif current_rsi >= 62 and (not is_bullish_trend or curr_price >= curr_upper):
             direction = "SELL 🔴"
         else:
             return "STAND BY / NO TRADE", "N/A", "Market in Equilibrium", details
 
-        # Calcolo Dinamico della Confidenza
+        # Calcolo Dinamico dell'Intelligenza/Confidenza del Bot
         score = 52.0
         if "BUY" in direction:
-            if current_rsi <= 35: score += 10.0
-            elif current_rsi <= 40: score += 6.0
-            if curr_price <= curr_lower * 1.005: score += 10.0
+            if current_rsi <= 30: score += 12.0
+            elif current_rsi <= 38: score += 7.0
+            if curr_price <= curr_lower * 1.002: score += 12.0
             if is_bullish_trend: score += 10.0
             if is_macd_bullish: score += 8.0
         elif "SELL" in direction:
-            if current_rsi >= 65: score += 10.0
-            elif current_rsi >= 60: score += 6.0
-            if curr_price >= curr_upper * 0.995: score += 10.0
+            if current_rsi >= 70: score += 12.0
+            elif current_rsi >= 62: score += 7.0
+            if curr_price >= curr_upper * 0.998: score += 12.0
             if not is_bullish_trend: score += 10.0
             if not is_macd_bullish: score += 8.0
 
