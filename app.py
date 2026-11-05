@@ -201,4 +201,173 @@ def ultimate_institutional_analysis(ticker, timeframe_choice):
             if not is_macd_bullish: score += 8.0
 
         final_score = min(score, 82.5)
-        confidence_str = f"{final_score:.1f
+        confidence_str = f"{final_score:.1f}% (Dynamic AI Confidence)"
+
+        return direction, confidence_str, "Balanced Confluence Confirmed", details
+            
+    except Exception as e:
+        return "STAND BY", "N/A", f"Error: {str(e)}", {}
+
+def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence, entry_time):
+    bot_token = "INSERISCI_QUI_IL_TUO_BOT_TOKEN"
+    chat_id = "INSERISCI_QUI_IL_TUO_CHAT_ID"
+    if bot_token == "INSERISCI_QUI_IL_TUO_BOT_TOKEN":
+        return
+    message = (
+        f"⚡ *AURA PRO SIGNAL* ⚡\n\n"
+        f"🔹 *Asset:* `{display_name}`\n"
+        f"⏰ *Timeframe:* `{timeframe}`\n"
+        f"🎯 *Direction:* *{direction}*\n"
+        f"🕒 *Entry Time:* `{entry_time}`\n"
+        f"📈 *Dynamic Confidence:* `{win_rate}`\n"
+        f"🛡️ *Status:* `{confidence}`\n"
+        f"💰 *Risk Management:* `1% Fixed Capital`"
+    )
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    payload = {"chat_id": chat_id, "text": message, "parse_mode": "Markdown"}
+    try:
+        requests.post(url, json=payload, timeout=3)
+    except Exception:
+        pass
+
+if "signal_active_snp" not in st.session_state: st.session_state.signal_active_snp = False
+if "scanner_results" not in st.session_state: st.session_state.scanner_results = []
+if "cached_asset_display_snp" not in st.session_state: st.session_state.cached_asset_display_snp = None
+if "cached_tf_choice_snp" not in st.session_state: st.session_state.cached_tf_choice_snp = None
+if "cached_tf_seconds_snp" not in st.session_state: st.session_state.cached_tf_seconds_snp = None
+if "cached_direction_snp" not in st.session_state: st.session_state.cached_direction_snp = None
+if "cached_win_rate_snp" not in st.session_state: st.session_state.cached_win_rate_snp = None
+if "cached_time_snp" not in st.session_state: st.session_state.cached_time_snp = None
+if "cached_confidence_snp" not in st.session_state: st.session_state.cached_confidence_snp = None
+if "cached_details_snp" not in st.session_state: st.session_state.cached_details_snp = {}
+
+if st.button("🚀 RUN SCANNER / ANALYSIS"):
+    if mercato_tipo == "🚀 Scanner Globale (Valute Verificate)":
+        st.session_state.scanner_results = []
+        combined_dict = {**forex_dict, **otc_dict}
+        
+        progress_bar = st.progress(0)
+        total_items = len(combined_dict)
+        i = 0
+        
+        for name, data in combined_dict.items():
+            direction, win_rate, conf, details = ultimate_institutional_analysis(data["symbol"], tf_choice)
+            if "STAND BY" not in direction:
+                st.session_state.scanner_results.append({
+                    "asset": name,
+                    "direction": direction,
+                    "confidence": win_rate,
+                    "rsi": details.get("RSI", "N/A"),
+                    "entry_time": get_next_candle_time(tf_seconds)
+                })
+            i += 1
+            progress_bar.progress(i / total_items)
+            
+        progress_bar.empty()
+        st.session_state.signal_active_snp = True
+    else:
+        direction, win_rate, confidence, details = ultimate_institutional_analysis(selected_asset, tf_choice)
+        st.session_state.cached_direction_snp = direction
+        st.session_state.cached_win_rate_snp = win_rate
+        st.session_state.cached_confidence_snp = confidence
+        st.session_state.cached_time_snp = get_next_candle_time(tf_seconds)
+        st.session_state.cached_asset_display_snp = selected_display
+        st.session_state.cached_tf_choice_snp = tf_choice
+        st.session_state.cached_tf_seconds_snp = tf_seconds
+        st.session_state.cached_details_snp = details
+        st.session_state.signal_active_snp = True
+            
+        if "STAND BY" not in direction:
+            send_telegram_alert(
+                selected_display, 
+                tf_choice, 
+                st.session_state.cached_direction_snp, 
+                st.session_state.cached_win_rate_snp, 
+                st.session_state.cached_confidence_snp, 
+                st.session_state.cached_time_snp
+            )
+
+if st.session_state.signal_active_snp:
+    if mercato_tipo == "🚀 Scanner Globale (Valute Verificate)":
+        st.success("Scanner completato!")
+        st.markdown("### 🎯 VALUTE CON SEGNALE ATTIVO")
+        if len(st.session_state.scanner_results) > 0:
+            for res in st.session_state.scanner_results:
+                st.markdown(f"""
+                <div class="analysis-box">
+                    <h4>{res['asset']} &rarr; <b>{res['direction']}</b></h4>
+                    <p><b>Confidence:</b> {res['confidence']} | <b>RSI:</b> {res['rsi']} | <b>Entry:</b> {res['entry_time']}</p>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.markdown("""
+            <div class="standby-box">
+                <h4>🛑 NESSUN SEGNALE AL MOMENTO</h4>
+                <p>Nessuna valuta ha superato i filtri di confluenza in questo timeframe. Il mercato è in perfetto equilibrio.</p>
+            </div>
+            """, unsafe_allow_html=True)
+    else:
+        st.success("Analysis complete!")
+        st.markdown("### SIGNAL RESULT")
+        st.markdown(f"""
+        * **Asset:** `{st.session_state.cached_asset_display_snp}`
+        * **Timeframe:** `{st.session_state.cached_tf_choice_snp}`
+        * **Signal Direction:** **{st.session_state.cached_direction_snp}**
+        * **Entry Time (Candle Close):** `{st.session_state.cached_time_snp}`
+        * **Dynamic AI Confidence:** `{st.session_state.cached_win_rate_snp}`
+        * **Filter Status:** `{st.session_state.cached_confidence_snp}`
+        * **Money Management:** `1% Account Capital`
+        """)
+        
+        details = st.session_state.cached_details_snp
+        if details:
+            if "STAND BY" in st.session_state.cached_direction_snp:
+                st.markdown(f"""
+                <div class="standby-box">
+                    <h4>🛑 STAND BY: MERCATO IN EQUILIBRIO</h4>
+                    <p>Nessuna spinta direzionale forte rilevata al momento.</p>
+                    <hr style="border-color: #ff4444;">
+                    <p style="color: #ffffff; text-align: left;"><b>RSI:</b> {details.get('RSI', 'N/A')}</p>
+                    <p style="color: #ffffff; text-align: left;"><b>Trend Breve:</b> {details.get('Trend Breve (EMA 9/21)', 'N/A')}</p>
+                    <p style="color: #ffffff; text-align: left;"><b>Bollinger:</b> {details.get('Bollinger Position', 'N/A')}</p>
+                    <p style="color: #ffffff; text-align: left;"><b>MACD:</b> {details.get('MACD Cross', 'N/A')}</p>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div class="analysis-box">
+                    <h4>🎯 SIGNAL CONFLUENCE ALIGNED</h4>
+                    <p><b>RSI (14):</b> {details.get('RSI', 'N/A')}</p>
+                    <p><b>Trend Breve:</b> {details.get('Trend Breve (EMA 9/21)', 'N/A')}</p>
+                    <p><b>Posizione Bollinger:</b> {details.get('Bollinger Position', 'N/A')}</p>
+                    <p><b>Momento MACD:</b> {details.get('MACD Cross', 'N/A')}</p>
+                </div>
+                """, unsafe_allow_html=True)
+
+        st.markdown("### ⏳ Current Candle Countdown")
+        initial_left = get_seconds_to_next_candle(st.session_state.cached_tf_seconds_snp)
+        
+        timer_html = f"""
+        <div style="font-size: 28px; font-weight: bold; color: #00ffcc; text-align: center; background-color: #1f1f1f; padding: 15px; border-radius: 8px; border: 1px solid #333333;" id="countdown_snp">
+            Loading timer...
+        </div>
+        <script>
+        var timeLeftSnp = {initial_left};
+        function updateTimerSnp() {{
+            if (timeLeftSnp <= 0) {{
+                document.getElementById("countdown_snp").innerHTML = "⏰ CANDELA CHIUSA!";
+                document.getElementById("countdown_snp").style.color = "#ff4444";
+                return;
+            }}
+            var minutes = Math.floor(timeLeftSnp / 60);
+            var seconds = timeLeftSnp % 60;
+            minutes = minutes < 10 ? "0" + minutes : minutes;
+            seconds = seconds < 10 ? "0" + seconds : seconds;
+            document.getElementById("countdown_snp").innerHTML = "⏱️ " + minutes + ":" + seconds;
+            timeLeftSnp--;
+        }}
+        setInterval(updateTimerSnp, 1000);
+        updateTimerSnp();
+        </script>
+        """
+        components.html(timer_html, height=80)
