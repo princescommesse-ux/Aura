@@ -410,7 +410,7 @@ if st.session_state.signal_active_snp:
         st.markdown("### ⏳ Current Candle Countdown (Pocket Option Sync)")
         initial_left = get_seconds_to_next_candle(st.session_state.cached_tf_seconds_snp)
 
-        timer_html = f"""
+        timer_html = """
         <div style="font-size: 28px; font-weight: bold; color: #2ecc71; text-align: center; background-color: #141414; padding: 15px; border-radius: 8px; border: 2px solid #2ecc71;" id="countdown_snp">
             Loading timer...
         </div>
@@ -427,4 +427,4 @@ if st.session_state.signal_active_snp:
             minutes = minutes < 10 ? "0" + minutes : minutes;
             seconds = seconds < 10 ? "0" + seconds : seconds;
             document.getElementById("countdown_snp").innerHTML = "⏱️ " + minutes + ":" + seconds;
-            timeLeftSnp-
+            timeLeftSnp--
