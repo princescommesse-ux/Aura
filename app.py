@@ -426,4 +426,4 @@ if st.session_state.signal_active_snp:
         js_p9 = 'var minutes = Math.floor(timeLeftSnp / 60); '
         js_p10 = 'var seconds = timeLeftSnp % 60; '
         js_p11 = 'minutes = minutes < 10 ? "0" + minutes : minutes; '
-        js_p12 = 'seconds = seconds < 10 ? "0" + second 
+        js_p12 = 'seconds = seconds < 10 ? "0" + second  
