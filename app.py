@@ -242,7 +242,6 @@ def ultimate_institutional_analysis(ticker, timeframe_choice, tf_sec):
             if adx_val >= 25.0: base_score += 4.0
 
         final_score = min(max(base_score, 81.0), 97.5)
-        # Estraiamo solo la percentuale pulita senza la scritta tra parentesi
         confidence_str = f"{final_score:.1f}%"
 
         return direction, confidence_str, "Confluence Verified", details
@@ -363,7 +362,6 @@ if st.session_state.signal_active_snp:
         else:
             dir_class = "signal-standby"
 
-        # Formattazione in verde per la percentuale di confidence e per il filter status "Confluence Verified"
         conf_display = st.session_state.cached_win_rate_snp
         conf_html = f"<span style='color: #2ecc71; font-weight: bold;'>{conf_display}</span>" if conf_display != "N/A" else "N/A"
 
@@ -426,4 +424,7 @@ if st.session_state.signal_active_snp:
             }}
             var minutes = Math.floor(timeLeftSnp / 60);
             var seconds = timeLeftSnp % 60;
-            minutes = minutes < 10 ? "0" + minutes : minu
+            minutes = minutes < 10 ? "0" + minutes : minutes;
+            seconds = seconds < 10 ? "0" + seconds : seconds;
+            document.getElementById("countdown_snp").innerHTML = "⏱️ " + minutes + ":" + seconds;
+            timeLeftSnp-
