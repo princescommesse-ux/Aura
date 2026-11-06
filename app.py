@@ -293,13 +293,11 @@ if st.button("🚀 RUN SCANNER / ANALYSIS"):
         for name, data in combined_dict.items():
             direction, win_rate, conf, details = ultimate_institutional_analysis(data["symbol"], tf_choice, tf_seconds)
             if "STAND BY" not in direction:
-                entry_t = get_next_candle_time(tf_seconds)
                 res_dict = {
                     "asset": name,
                     "direction": direction,
                     "confidence": win_rate,
                     "rsi": details.get("RSI", "N/A"),
-                    "entry_time": entry_t,
                     "timeframe": tf_choice
                 }
                 st.session_state.scanner_results.append(res_dict)
@@ -307,6 +305,12 @@ if st.button("🚀 RUN SCANNER / ANALYSIS"):
             progress_bar.progress(i / total_items)
 
         progress_bar.empty()
+        
+        # Calcoliamo UNIFICATAMENTE l'orario della prossima candela a fine scansione per tutti i risultati validi
+        unified_entry_t = get_next_candle_time(tf_seconds)
+        for res in st.session_state.scanner_results:
+            res["entry_time"] = unified_entry_t
+
         st.session_state.signal_active_snp = True
     else:
         direction, win_rate, confidence, details = ultimate_institutional_analysis(selected_asset, tf_choice, tf_seconds)
@@ -410,6 +414,4 @@ if st.session_state.signal_active_snp:
         st.markdown("### ⏳ Current Candle Countdown (Pocket Option Sync)")
         initial_left = get_seconds_to_next_candle(st.session_state.cached_tf_seconds_snp)
 
-        timer_html = '<div style="font-size: 28px; font-weight: bold; color: #2ecc71; text-align: center; background-color: #141414; padding: 15px; border-radius: 8px; border: 2px solid #2ecc71;" id="countdown_snp">Loading timer...</div><script>var timeLeftSnp = ' + str(initial_left) + ';function updateTimerSnp() {if (timeLeftSnp <= 0) {document.getElementById("countdown_snp").innerHTML = "⏰ CANDELA CHIUSA!";document.getElementById("countdown_snp").style.color = "#ff4444";return;}var minutes = Math.floor(timeLeftSnp / 60);var seconds = timeLeftSnp % 60;minutes = minutes < 10 ? "0" + minutes : minutes;seconds = seconds < 10 ? "0" + seconds : seconds;document.getElementById("countdown_snp").innerHTML = "⏱️ " + minutes + ":" + seconds;timeLeftSnp--;}setInterval(updateTimerSnp, 1000);updateTimerSnp();</script>'
-        
-        components.html(timer_html, height=80)
+        timer_html = '<div style="font-size: 28px; font-weight: bold; color: #2ecc71; text-align: center; background-color: #141414; padding: 15px; border-radius: 8px; border: 2px solid #2ecc71;" id="countdown_snp">Loading timer...</div><script>var timeLeftSnp = ' + str(initial_left) + ';function updateTimerSnp() {if (timeLeftSnp <= 0) {document.getElementById("countdown_snp").innerHTML = "⏰ CANDELA CHIUSA!";document.getElementById("countdown_snp").style.color = "#ff4444";return;}var minutes = Math.floor(timeLeftSnp / 60);var seconds = timeLeftSnp % 60;minutes = minutes < 10 ? "0" + minutes : minutes;seconds = seconds < 10 ? "0" + seconds : seconds;document.getElementById("countdown_snp").innerHTML = "⏱️ " + minutes + ":" + seconds;timeLeftSnp--;}setInterval(updateTimer
