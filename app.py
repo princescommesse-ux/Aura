@@ -426,4 +426,4 @@ if st.session_state.signal_active_snp:
             '    } '
             '    var minutes = Math.floor(timeLeftSnp / 60); '
             '    var seconds = timeLeftSnp % 60; '
-                 
+                
