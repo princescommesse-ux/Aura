@@ -145,7 +145,6 @@ def get_seconds_to_next_candle(seconds):
 def get_next_candle_time(seconds):
     now = datetime.utcnow() + timedelta(hours=1)
     secs_left = get_seconds_to_next_candle(seconds)
-    # Aggiungiamo 'seconds' per puntare alla candela successiva in cui si entrerà a mercato
     target_time = now + timedelta(seconds=secs_left + seconds)
     total_epoch_secs = int(target_time.timestamp())
     aligned_epoch_secs = total_epoch_secs - (total_epoch_secs % seconds)
@@ -416,4 +415,5 @@ if st.session_state.signal_active_snp:
 
         timer_html = f'<div style="font-size: 28px; font-weight: bold; color: #2ecc71; text-align: center; background-color: #141414; padding: 15px; border-radius: 8px; border: 2px solid #2ecc71;" id="countdown_snp">Loading timer...</div><script>var timeLeftSnp = {initial_left}; function updateTimerSnp() {{ if (timeLeftSnp <= 0) {{ document.getElementById("countdown_snp").innerHTML = "⏰ CANDELA CHIUSA!"; document.getElementById("countdown_snp").style.color = "#ff4444"; return; }} var m = Math.floor(timeLeftSnp / 60); var s = timeLeftSnp % 60; document.getElementById("countdown_snp").innerHTML = "⏱️ " + (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s); timeLeftSnp--; }} setInterval(updateTimerSnp, 1000); updateTimerSnp();</script>'
         
-        components.html(timer_html, h 
+        components.html(timer_html, height=80)
+
