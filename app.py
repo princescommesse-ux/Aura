@@ -12,46 +12,45 @@ st.set_page_config(
     layout="centered"
 )
 
-# Custom Dark Mode styling (Tema Bianco & Verde)
+# Custom Dark Mode styling (Verde classico #2ecc71 e Bianco)
 st.markdown(
     """
     <style>
     .main { background-color: #0d0d0d; color: #ffffff; }
-    h1, h2, h3 { color: #00ffcc !important; font-weight: bold; }
+    h1, h2, h3 { color: #2ecc71 !important; font-weight: bold; }
     .stButton>button { 
         width: 100%; 
         border-radius: 8px; 
         font-weight: bold; 
         background-color: #161616; 
-        color: #00ffcc; 
-        border: 2px solid #00ffcc; 
+        color: #2ecc71; 
+        border: 2px solid #2ecc71; 
         font-size: 18px;
     }
     .stButton>button:hover { 
-        background-color: #00ffcc; 
+        background-color: #2ecc71; 
         color: #000000; 
-        border-color: #00ffcc; 
+        border-color: #2ecc71; 
     }
     .analysis-box { 
         background-color: #141414; 
         padding: 18px; 
         border-radius: 10px; 
-        border: 2px solid #00ffcc; 
+        border: 2px solid #2ecc71; 
         margin-top: 15px; 
         color: #ffffff;
     }
-    .analysis-box h4 { color: #00ffcc !important; font-size: 20px; }
+    .analysis-box h4 { color: #2ecc71 !important; font-size: 20px; }
     .standby-box { 
         background-color: #141414; 
         padding: 18px; 
         border-radius: 10px; 
         border: 2px solid #ff4444; 
         margin-top: 15px; 
-        text-align: center; 
-        color: #ff4444; 
-        font-weight: bold; 
+        text-align: left; 
+        color: #ffffff; 
     }
-    .signal-buy { color: #00ff88; font-weight: bold; font-size: 22px; }
+    .signal-buy { color: #2ecc71; font-weight: bold; font-size: 22px; }
     .signal-sell { color: #ff4444; font-weight: bold; font-size: 22px; }
     </style>
     """, 
@@ -340,13 +339,13 @@ if st.session_state.signal_active_snp:
                 st.markdown(f"""
                 <div class="analysis-box">
                     <h4 style="color:#ffffff;">{res['asset']} &rarr; <span class="{dir_class}">{res['direction']}</span></h4>
-                    <p style="color:#ffffff;"><b>Timeframe:</b> <span style="color:#00ffcc;">{res['timeframe']}</span> | <b>Confidence:</b> <span style="color:#00ffcc;">{res['confidence']}</span> | <b>RSI:</b> {res['rsi']} | <b>Entry:</b> <span style="color:#00ffcc;">{res['entry_time']}</span></p>
+                    <p style="color:#ffffff;"><b>Timeframe:</b> <span style="color:#2ecc71;">{res['timeframe']}</span> | <b>Confidence:</b> <span style="color:#2ecc71;">{res['confidence']}</span> | <b>RSI:</b> {res['rsi']} | <b>Entry:</b> <span style="color:#2ecc71;">{res['entry_time']}</span></p>
                 </div>
                 """, unsafe_allow_html=True)
         else:
             st.markdown("""
-            <div class="standby-box">
-                <h4>🛑 NESSUN SEGNALE IN QUESTO MOMENTO</h4>
+            <div class="standby-box" style="border: 2px solid #ff4444; text-align: center;">
+                <h4 style="color: #ff4444;">🛑 NESSUN SEGNALE IN QUESTO MOMENTO</h4>
                 <p style="color:#ffffff;">Nessun asset soddisfa i filtri di allineamento Macro-Trend e ADX.</p>
             </div>
             """, unsafe_allow_html=True)
@@ -354,7 +353,7 @@ if st.session_state.signal_active_snp:
         st.success("Analysis complete!")
         st.markdown("### SIGNAL RESULT")
         dir_display = st.session_state.cached_direction_snp
-        dir_html = f"<span class='signal-buy'>{dir_display}</span>" if "BUY" in dir_display else f"<span class='signal-sell'>{dir_display}</span>" if "SELL" in dir_display else dir_display
+        dir_html = f"<span class='signal-buy'>{dir_display}</span>" if "BUY" in dir_display else f"<span class='signal-sell'>{dir_display}</span>" if "SELL" in dir_display else f"<span style='color: #ff4444; font-weight: bold;'>{dir_display}</span>"
         
         st.markdown(f"""
         * **Asset:** `{st.session_state.cached_asset_display_snp}`
@@ -370,21 +369,22 @@ if st.session_state.signal_active_snp:
             if "STAND BY" in st.session_state.cached_direction_snp:
                 st.markdown(f"""
                 <div class="standby-box">
-                    <h4>🛑 STAND BY: FILTRI NON SUPERATI</h4>
-                    <p style="color:#ffffff;">Mercato laterale o disallineamento tra Trend Macro e Micro.</p>
-                    <hr style="border-color: #ff4444;">
-                    <p style="color: #ffffff; text-align: left;"><b>RSI:</b> {details.get('RSI', 'N/A')}</p>
-                    <p style="color: #ffffff; text-align: left;"><b>Trend Macro:</b> {details.get('Trend Macro', 'N/A')}</p>
-                    <p style="color: #ffffff; text-align: left;"><b>Forza ADX:</b> {details.get('ADX Strength', 'N/A')}</p>
+                    <h4 style="color: #ff4444; margin-top: 0;">🛑 STAND BY: FILTRI NON SUPERATI</h4>
+                    <p style="color:#ffffff; margin-bottom: 10px;"><b>Asset:</b> {st.session_state.cached_asset_display_snp} | <b>Timeframe:</b> {st.session_state.cached_tf_choice_snp}</p>
+                    <hr style="border-color: #333333; margin: 10px 0;">
+                    <p style="color: #ffffff; text-align: left; margin: 5px 0;"><b>Motivo:</b> Mercato laterale o disallineamento (Stato: {st.session_state.cached_confidence_snp})</p>
+                    <p style="color: #ffffff; text-align: left; margin: 5px 0;"><b>RSI:</b> {details.get('RSI', 'N/A')}</p>
+                    <p style="color: #ffffff; text-align: left; margin: 5px 0;"><b>Trend Macro:</b> {details.get('Trend Macro', 'N/A')}</p>
+                    <p style="color: #ffffff; text-align: left; margin: 5px 0;"><b>Forza ADX:</b> {details.get('ADX Strength', 'N/A')}</p>
                 </div>
                 """, unsafe_allow_html=True)
             else:
                 st.markdown(f"""
                 <div class="analysis-box">
                     <h4>🎯 CONFLUENZA ISTITUZIONALE VERIFICATA</h4>
-                    <p style="color:#ffffff;"><b>RSI (14):</b> <span style="color:#00ffcc;">{details.get('RSI', 'N/A')}</span></p>
+                    <p style="color:#ffffff;"><b>RSI (14):</b> <span style="color:#2ecc71;">{details.get('RSI', 'N/A')}</span></p>
                     <p style="color:#ffffff;"><b>Trend Macro:</b> {details.get('Trend Macro', 'N/A')}</p>
-                    <p style="color:#ffffff;"><b>Forza ADX:</b> <span style="color:#00ffcc;">{details.get('ADX Strength', 'N/A')}</span></p>
+                    <p style="color:#ffffff;"><b>Forza ADX:</b> <span style="color:#2ecc71;">{details.get('ADX Strength', 'N/A')}</span></p>
                     <p style="color:#ffffff;"><b>Posizione Bollinger:</b> {details.get('Bollinger Position', 'N/A')}</p>
                 </div>
                 """, unsafe_allow_html=True)
@@ -393,7 +393,7 @@ if st.session_state.signal_active_snp:
         initial_left = get_seconds_to_next_candle(st.session_state.cached_tf_seconds_snp)
 
         timer_html = f"""
-        <div style="font-size: 28px; font-weight: bold; color: #00ffcc; text-align: center; background-color: #141414; padding: 15px; border-radius: 8px; border: 2px solid #00ffcc;" id="countdown_snp">
+        <div style="font-size: 28px; font-weight: bold; color: #2ecc71; text-align: center; background-color: #141414; padding: 15px; border-radius: 8px; border: 2px solid #2ecc71;" id="countdown_snp">
             Loading timer...
         </div>
         <script>
