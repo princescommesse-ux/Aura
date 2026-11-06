@@ -414,16 +414,16 @@ if st.session_state.signal_active_snp:
         initial_left = get_seconds_to_next_candle(st.session_state.cached_tf_seconds_snp)
 
         timer_div = '<div style="font-size: 28px; font-weight: bold; color: #2ecc71; text-align: center; background-color: #141414; padding: 15px; border-radius: 8px; border: 2px solid #2ecc71;" id="countdown_snp">Loading timer...</div>'
-        timer_script = (
-            '<script>'
-            'var timeLeftSnp = ' + str(initial_left) + '; '
-            'function updateTimerSnp() { '
-            '    if (timeLeftSnp <= 0) { '
-            '        document.getElementById("countdown_snp").innerHTML = "⏰ CANDELA CHIUSA!"; '
-            '        document.getElementById("countdown_snp").style.color = "#ff4444"; '
-            '        return; '
-            '    } '
-            '    var minutes = Math.floor(timeLeftSnp / 60); '
-            '    var seconds = timeLeftSnp % 60; '
-            '    minutes = minutes < 10 ? "0" + minutes : minutes; '
-            '    seconds = seconds < 10 ?
+        
+        js_p1 = '<script>'
+        js_p2 = 'var timeLeftSnp = ' + str(initial_left) + '; '
+        js_p3 = 'function updateTimerSnp() { '
+        js_p4 = 'if (timeLeftSnp <= 0) { '
+        js_p5 = 'document.getElementById("countdown_snp").innerHTML = "⏰ CANDELA CHIUSA!"; '
+        js_p6 = 'document.getElementById("countdown_snp").style.color = "#ff4444"; '
+        js_p7 = 'return; '
+        js_p8 = '} '
+        js_p9 = 'var minutes = Math.floor(timeLeftSnp / 60); '
+        js_p10 = 'var seconds = timeLeftSnp % 60; '
+        js_p11 = 'minutes = minutes < 10 ? "0" + minutes : minutes; '
+        js_p12 = 'seconds = seconds < 10 ? "0" + second
