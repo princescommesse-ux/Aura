@@ -306,7 +306,6 @@ if st.button("🚀 RUN SCANNER / ANALYSIS"):
 
         progress_bar.empty()
         
-        # Assegnazione unificata e sincronizzata dell'orario futuro per tutti i risultati del Global Scanner
         unified_entry_t = get_next_candle_time(tf_seconds)
         for res in st.session_state.scanner_results:
             res["entry_time"] = unified_entry_t
@@ -414,5 +413,17 @@ if st.session_state.signal_active_snp:
         st.markdown("### ⏳ Current Candle Countdown (Pocket Option Sync)")
         initial_left = get_seconds_to_next_candle(st.session_state.cached_tf_seconds_snp)
 
-        timer_html = '<div style="font-size: 28px; font-weight: bold; color: #2ecc71; text-align: center; background-color: #141414; padding: 15px; border-radius: 8px; border: 2px solid #2ecc71;" id="countdown_snp">Loading timer...</div><script>var timeLeftSnp = ' + str(initial_left) + '; function updateTimerSnp() { if (timeLeftSnp <= 0) { document.getElementById("countdown_snp").innerHTML = "⏰ CANDELA CHIUSA!"; document.getElementById("countdown_snp").style.color = "#ff4444"; return; } var minutes = Math.floor(timeLeftSnp / 60); var seconds = timeLeftSnp % 60; minutes = minutes < 10 ? "0" + minutes : minutes; seconds = seconds < 10 ? "0" + seconds : seconds; document.getElementById("countdown_snp").innerHTML = "⏱️ " + minutes + ":" + seconds; timeLeftSnp--; } setInterval(up
-                
+        timer_div = '<div style="font-size: 28px; font-weight: bold; color: #2ecc71; text-align: center; background-color: #141414; padding: 15px; border-radius: 8px; border: 2px solid #2ecc71;" id="countdown_snp">Loading timer...</div>'
+        timer_script = (
+            '<script>'
+            'var timeLeftSnp = ' + str(initial_left) + '; '
+            'function updateTimerSnp() { '
+            '    if (timeLeftSnp <= 0) { '
+            '        document.getElementById("countdown_snp").innerHTML = "⏰ CANDELA CHIUSA!"; '
+            '        document.getElementById("countdown_snp").style.color = "#ff4444"; '
+            '        return; '
+            '    } '
+            '    var minutes = Math.floor(timeLeftSnp / 60); '
+            '    var seconds = timeLeftSnp % 60; '
+            '    minutes = minutes < 10 ? "0" + minutes : minutes; '
+            '    seconds = seconds < 10 ?
