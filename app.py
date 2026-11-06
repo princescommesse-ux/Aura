@@ -50,8 +50,9 @@ st.markdown(
         text-align: left; 
         color: #ffffff; 
     }
-    .signal-buy { color: #2ecc71; font-weight: bold; font-size: 22px; }
-    .signal-sell { color: #ff4444; font-weight: bold; font-size: 22px; }
+    .signal-buy { color: #2ecc71; font-weight: bold; font-size: 20px; }
+    .signal-sell { color: #ff4444; font-weight: bold; font-size: 20px; }
+    .signal-standby { color: #ff4444; font-weight: bold; font-size: 20px; }
     </style>
     """, 
     unsafe_allow_html=True,
@@ -352,17 +353,26 @@ if st.session_state.signal_active_snp:
     else:
         st.success("Analysis complete!")
         st.markdown("### SIGNAL RESULT")
-        dir_display = st.session_state.cached_direction_snp
-        dir_html = f"<span class='signal-buy'>{dir_display}</span>" if "BUY" in dir_display else f"<span class='signal-sell'>{dir_display}</span>" if "SELL" in dir_display else f"<span style='color: #ff4444; font-weight: bold;'>{dir_display}</span>"
         
+        dir_display = st.session_state.cached_direction_snp
+        if "BUY" in dir_display:
+            dir_class = "signal-buy"
+        elif "SELL" in dir_display:
+            dir_class = "signal-sell"
+        else:
+            dir_class = "signal-standby"
+
+        # Sostituito il markdown con tag grezzi con un container HTML pulito
         st.markdown(f"""
-        * **Asset:** `{st.session_state.cached_asset_display_snp}`
-        * **Timeframe:** `{st.session_state.cached_tf_choice_snp}`
-        * **Signal Direction:** {dir_html}
-        * **Entry Time (Candle Close):** `{st.session_state.cached_time_snp}`
-        * **Dynamic AI Confidence:** `{st.session_state.cached_win_rate_snp}`
-        * **Filter Status:** `{st.session_state.cached_confidence_snp}`
-        """)
+        <div class="analysis-box">
+            <p style="color:#ffffff; margin: 6px 0;"><b>Asset:</b> {st.session_state.cached_asset_display_snp}</p>
+            <p style="color:#ffffff; margin: 6px 0;"><b>Timeframe:</b> <span style="color:#2ecc71;">{st.session_state.cached_tf_choice_snp}</span></p>
+            <p style="color:#ffffff; margin: 6px 0;"><b>Signal Direction:</b> <span class="{dir_class}">{dir_display}</span></p>
+            <p style="color:#ffffff; margin: 6px 0;"><b>Entry Time (Candle Close):</b> <span style="color:#2ecc71;">{st.session_state.cached_time_snp}</span></p>
+            <p style="color:#ffffff; margin: 6px 0;"><b>Dynamic AI Confidence:</b> {st.session_state.cached_win_rate_snp}</p>
+            <p style="color:#ffffff; margin: 6px 0;"><b>Filter Status:</b> {st.session_state.cached_confidence_snp}</p>
+        </div>
+        """, unsafe_allow_html=True)
 
         details = st.session_state.cached_details_snp
         if details:
