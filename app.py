@@ -12,7 +12,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# Custom Dark Mode styling (Verde classico #2ecc71 e Bianco)
+# Custom Dark Mode styling
 st.markdown(
     """
     <style>
@@ -62,19 +62,18 @@ st.markdown(
 
 st.title("⚡ AURA PRO ⚡")
 
-# --- FUNZIONE CONTROLLO MERCATO FOREX E SESSIONI ---
+# --- CONTROLLO MERCATO FOREX E SESSIONI ---
 def get_forex_market_status():
     now_utc = datetime.utcnow()
-    weekday = now_utc.weekday() # 0=Lun, 5=Sab, 6=Dom
+    weekday = now_utc.weekday()
     hour = now_utc.hour
     
-    # Chiusura weekend standard Forex: da Venerdì ore 22:00 UTC a Domenica ore 22:00 UTC
     is_weekend = False
-    if weekday == 5: # Sabato
+    if weekday == 5:
         is_weekend = True
-    elif weekday == 6 and hour < 22: # Domenica prima delle 22:00 UTC
+    elif weekday == 6 and hour < 22:
         is_weekend = True
-    elif weekday == 4 and hour >= 22: # Venerdì dopo le 22:00 UTC
+    elif weekday == 4 and hour >= 22:
         is_weekend = True
         
     return not is_weekend, now_utc
@@ -91,7 +90,6 @@ def get_active_sessions(now_utc):
 market_open, current_utc_time = get_forex_market_status()
 sessions = get_active_sessions(current_utc_time)
 
-# Widget informativo sessioni di mercato
 st.markdown("### 🌐 Forex Market Sessions (UTC)")
 cols = st.columns(4)
 session_names = [("Sydney", sessions["Sydney"]), ("Tokyo", sessions["Tokyo"]), ("London", sessions["London"]), ("New York", sessions["New York"])]
@@ -105,16 +103,16 @@ for idx, (s_name, s_status) in enumerate(session_names):
 st.markdown("---")
 
 if not market_open:
-    st.markdown("""
-    <div class="standby-box" style="border: 2px solid #ff4444; text-align: center; padding: 20px;">
-        <h3 style="color: #ff4444; margin-top: 0;">💤 MERCATO FOREX CHIUSO (WEEKEND)</h3>
-        <p style="color:#ffffff; font-size: 16px;">Il mercato delle valute è attualmente chiuso per il fine settimana. I segnali reali e le analisi su yFinance non sono disponibili fino alla riapertura (Domenica ore 22:00 UTC). Puoi comunque testare la modalità Crypto OTC se attiva.</p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        '<div class="standby-box" style="border: 2px solid #ff4444; text-align: center; padding: 20px;">'
+        '<h3 style="color: #ff4444; margin-top: 0;">💤 MERCATO FOREX CHIUSO (WEEKEND)</h3>'
+        '<p style="color:#ffffff; font-size: 16px;">Il mercato delle valute è chiuso per il fine settimana. Le analisi su yFinance non sono disponibili fino alla riapertura (Domenica ore 22:00 UTC). Puoi testare la modalità Crypto OTC.</p>'
+        '</div>',
+        unsafe_allow_html=True
+    )
 
 mercato_tipo = st.radio("Seleziona Modalità:", ["🚀 Scanner Globale", "Forex Reale", "Asset OTC Valute", "Crypto OTC"], horizontal=True)
 
-# Coppie Forex Reali (Rimosse EUR/AUD e NZD/USD)
 forex_dict = {
     "🇪🇺🇺🇸 EUR/USD": {"symbol": "EURUSD=X"},
     "🇬🇧🇺🇸 GBP/USD": {"symbol": "GBPUSD=X"},
@@ -135,7 +133,6 @@ forex_dict = {
     "🇨🇭🇯🇵 CHF/JPY": {"symbol": "CHFJPY=X"}
 }
 
-# Coppie OTC Valute
 otc_dict = {
     "🇦🇺🇨🇭 AUD/CHF OTC": {"symbol": "AUDCHF=X"},
     "🇦🇺🇺🇸 AUD/USD OTC": {"symbol": "AUDUSD=X"},
@@ -158,7 +155,6 @@ otc_dict = {
     "🇦🇺🇨🇦 AUD/CAD OTC": {"symbol": "AUDCAD=X"}
 }
 
-# Crypto OTC
 crypto_otc_dict = {
     "₿ Bitcoin OTC": {"symbol": "BTC-USD"},
     "Ξ Ethereum OTC": {"symbol": "ETH-USD"},
@@ -395,19 +391,24 @@ if st.session_state.signal_active_snp:
         if len(st.session_state.scanner_results) > 0:
             for res in st.session_state.scanner_results:
                 dir_class = "signal-buy" if "BUY" in res['direction'] else "signal-sell"
-                st.markdown(f"""
-                <div class="analysis-box">
-                    <h4 style="color:#ffffff;">{res['asset']} &rarr; <span class="{dir_class}">{res['direction']}</span></h4>
-                    <p style="color:#ffffff;"><b>Timeframe:</b> <span style="color:#2ecc71;">{res['timeframe']}</span> | <b>Confidence:</b> <span style="color:#2ecc71;">{res['confidence']}</span> | <b>RSI:</b> {res['rsi']} | <b>Entry:</b> <span style="color:#2ecc71;">{res['entry_time']}</span></p>
-                </div>
-                """, unsafe_allow_html=True)
+                box_html = (
+                    '<div class="analysis-box">'
+                    f'<h4 style="color:#ffffff;">{res["asset"]} &rarr; <span class="{dir_class}">{res["direction"]}</span></h4>'
+                    f'<p style="color:#ffffff;"><b>Timeframe:</b> <span style="color:#2ecc71;">{res["timeframe"]}</span> | '
+                    f'<b>Confidence:</b> <span style="color:#2ecc71;">{res["confidence"]}</span> | '
+                    f'<b>RSI:</b> {res["rsi"]} | '
+                    f'<b>Entry:</b> <span style="color:#2ecc71;">{res["entry_time"]}</span></p>'
+                    '</div>'
+                )
+                st.markdown(box_html, unsafe_allow_html=True)
         else:
-            st.markdown("""
-            <div class="standby-box" style="border: 2px solid #ff4444; text-align: center;">
-                <h4 style="color: #ff4444;">🛑 NESSUN SEGNALE IN QUESTO MOMENTO</h4>
-                <p style="color:#ffffff;">Nessun asset soddisfa i filtri di allineamento Macro-Trend e ADX.</p>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(
+                '<div class="standby-box" style="border: 2px solid #ff4444; text-align: center;">'
+                '<h4 style="color: #ff4444;">🛑 NESSUN SEGNALE IN QUESTO MOMENTO</h4>'
+                '<p style="color:#ffffff;">Nessun asset soddisfa i filtri di allineamento Macro-Trend e ADX.</p>'
+                '</div>',
+                unsafe_allow_html=True
+            )
     else:
         st.success("Analysis complete!")
         st.markdown("### SIGNAL RESULT")
@@ -426,22 +427,22 @@ if st.session_state.signal_active_snp:
         status_display = st.session_state.cached_confidence_snp
         status_html = f"<span style='color: #2ecc71; font-weight: bold;'>{status_display}</span>" if status_display == "Confluence Verified" else status_display
 
-        st.markdown(f"""
-        <div class="analysis-box">
-            <p style="color:#ffffff; margin: 6px 0;"><b>Asset:</b> {st.session_state.cached_asset_display_snp}</p>
-            <p style="color:#ffffff; margin: 6px 0;"><b>Timeframe:</b> <span style="color:#2ecc71;">{st.session_state.cached_tf_choice_snp}</span></p>
-            <p style="color:#ffffff; margin: 6px 0;"><b>Signal Direction:</b> <span class="{dir_class}">{dir_display}</span></p>
-            <p style="color:#ffffff; margin: 6px 0;"><b>Entry Time (Candle Close):</b> <span style="color:#2ecc71;">{st.session_state.cached_time_snp}</span></p>
-            <p style="color:#ffffff; margin: 6px 0;"><b>Dynamic AI Confidence:</b> {conf_html}</p>
-            <p style="color:#ffffff; margin: 6px 0;"><b>Filter Status:</b> {status_html}</p>
-        </div>
-        """, unsafe_allow_html=True)
+        result_html = (
+            '<div class="analysis-box">'
+            f'<p style="color:#ffffff; margin: 6px 0;"><b>Asset:</b> {st.session_state.cached_asset_display_snp}</p>'
+            f'<p style="color:#ffffff; margin: 6px 0;"><b>Timeframe:</b> <span style="color:#2ecc71;">{st.session_state.cached_tf_choice_snp}</span></p>'
+            f'<p style="color:#ffffff; margin: 6px 0;"><b>Signal Direction:</b> <span class="{dir_class}">{dir_display}</span></p>'
+            f'<p style="color:#ffffff; margin: 6px 0;"><b>Entry Time (Candle Close):</b> <span style="color:#2ecc71;">{st.session_state.cached_time_snp}</span></p>'
+            f'<p style="color:#ffffff; margin: 6px 0;"><b>Dynamic AI Confidence:</b> {conf_html}</p>'
+            f'<p style="color:#ffffff; margin: 6px 0;"><b>Filter Status:</b> {status_html}</p>'
+            '</div>'
+        )
+        st.markdown(result_html, unsafe_allow_html=True)
 
         details = st.session_state.cached_details_snp
         if details:
             if "STAND BY" in st.session_state.cached_direction_snp:
-                st.markdown(f"""
-                <div class="standby-box">
-                    <h4 style="color: #ff4444; margin-top: 0;">🛑 STAND BY: FILTRI NON SUPERATI</h4>
-                    <p styl
-               
+                standby_detail_html = (
+                    '<div class="standby-box">'
+                    '<h4 style="color: #ff4444; margin-top: 0;">🛑 STAND BY: FILTRI NON SUPERATI</h4>'
+                    f'<p style="color:#ffffff; margin-bottom: 10px;"><b>Asset:</b> {st.session_state.cached_asset_display_snp} | <b>Timeframe:</b> {st.session_state.cached_tf_choice_sn
