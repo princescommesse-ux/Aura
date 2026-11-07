@@ -53,12 +53,70 @@ st.markdown(
     .signal-buy { color: #2ecc71; font-weight: bold; font-size: 20px; }
     .signal-sell { color: #ff4444; font-weight: bold; font-size: 20px; }
     .signal-standby { color: #ff4444; font-weight: bold; font-size: 20px; }
+    .session-badge-open { background-color: #1b4d3e; color: #2ecc71; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; border: 1px solid #2ecc71; }
+    .session-badge-closed { background-color: #3d1b1b; color: #ff4444; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; border: 1px solid #ff4444; }
     </style>
     """, 
     unsafe_allow_html=True,
 )
 
 st.title("⚡ AURA PRO ⚡")
+
+# --- FUNZIONE CONTROLLO MERCATO FOREX E SESSIONI ---
+def get_forex_market_status():
+    now_utc = datetime.utcnow()
+    weekday = now_utc.weekday() # 0=Lun, 5=Sab, 6=Dom
+    hour = now_utc.hour
+    
+    # Chiusura weekend standard Forex: da Venerdì ore 22:00 UTC a Domenica ore 22:00 UTC
+    is_weekend = False
+    if weekday == 5: # Sabato
+        is_weekend = True
+    elif weekday == 6 and hour < 22: # Domenica prima delle 22:00 UTC
+        is_weekend = True
+    elif weekday == 4 and hour >= 22: # Venerdì dopo le 22:00 UTC
+        is_weekend = True
+        
+    return not is_weekend, now_utc
+
+def get_active_sessions(now_utc):
+    hour = now_utc.hour
+    # Orari UTC di apertura delle sessioni principali
+    # Sydney: 22:00 - 07:00 UTC
+    # Tokyo: 00:00 - 09:00 UTC
+    # London: 08:00 - 17:00 UTC
+    # New York: 13:00 - 22:00 UTC
+    
+    sydney = 22 <= hour or hour < 7
+    tokyo = 0 <= hour < 9
+    london = 8 <= hour < 17
+    new_york = 13 <= hour < 22
+    
+    return {"Sydney": sydney, "Tokyo": tokyo, "London": london, "New York": new_york}
+
+market_open, current_utc_time = get_forex_market_status()
+sessions = get_active_sessions(current_utc_time)
+
+# Widget informativo sessioni di mercato
+st.markdown("### 🌐 Forex Market Sessions (UTC)")
+cols = st.columns(4)
+session_names = [("Sydney", sessions["Sydney"]), ("Tokyo", sessions["Tokyo"]), ("London", sessions["London"]), ("New York", sessions["New York"])]
+for idx, (s_name, s_status) in enumerate(session_names):
+    with cols[idx]:
+        if s_status and market_open:
+            st.markdown(f"**{s_name}**<br><span class='session-badge-open'>OPEN 🟢</span>", unsafe_allow_html=True)
+        else:
+            st.markdown(f"**{s_name}**<br><span class='session-badge-closed'>CLOSED 🔴</span>", unsafe_allow_html=True)
+
+st.markdown("---")
+
+if not market_open:
+    st.markdown("""
+    <div class="standby-box" style="border: 2px solid #ff4444; text-align: center; padding: 20px;">
+        <h3 style="color: #ff4444; margin-top: 0;">💤 MERCATO FOREX CHIUSO (WEEKEND)</h3>
+        <p style="color:#ffffff; font-size: 16px;">Il mercato delle valute è attualmente chiuso per il fine settimana. I segnali reali e le analisi su yFinance non sono disponibili fino alla riapertura (Domenica ore 22:00 UTC). Puoi comunque testare la modalità Crypto OTC se attiva.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 mercato_tipo = st.radio("Seleziona Modalità:", ["🚀 Scanner Globale", "Forex Reale", "Asset OTC Valute", "Crypto OTC"], horizontal=True)
 
@@ -282,56 +340,59 @@ if "cached_confidence_snp" not in st.session_state: st.session_state.cached_conf
 if "cached_details_snp" not in st.session_state: st.session_state.cached_details_snp = {}
 
 if st.button("🚀 RUN SCANNER / ANALYSIS"):
-    if mercato_tipo == "🚀 Scanner Globale":
-        st.session_state.scanner_results = []
-        combined_dict = {**forex_dict, **otc_dict}
-
-        progress_bar = st.progress(0)
-        total_items = len(combined_dict)
-        i = 0
-
-        for name, data in combined_dict.items():
-            direction, win_rate, conf, details = ultimate_institutional_analysis(data["symbol"], tf_choice, tf_seconds)
-            if "STAND BY" not in direction:
-                res_dict = {
-                    "asset": name,
-                    "direction": direction,
-                    "confidence": win_rate,
-                    "rsi": details.get("RSI", "N/A"),
-                    "timeframe": tf_choice
-                }
-                st.session_state.scanner_results.append(res_dict)
-            i += 1
-            progress_bar.progress(i / total_items)
-
-        progress_bar.empty()
-        
-        unified_entry_t = get_next_candle_time(tf_seconds)
-        for res in st.session_state.scanner_results:
-            res["entry_time"] = unified_entry_t
-
-        st.session_state.signal_active_snp = True
+    if not market_open and mercato_tipo != "Crypto OTC":
+        st.error("Impossibile eseguire lo scanner: il mercato Forex è chiuso nel weekend!")
     else:
-        direction, win_rate, confidence, details = ultimate_institutional_analysis(selected_asset, tf_choice, tf_seconds)
-        st.session_state.cached_direction_snp = direction
-        st.session_state.cached_win_rate_snp = win_rate
-        st.session_state.cached_confidence_snp = confidence
-        st.session_state.cached_time_snp = get_next_candle_time(tf_seconds)
-        st.session_state.cached_asset_display_snp = selected_display
-        st.session_state.cached_tf_choice_snp = tf_choice
-        st.session_state.cached_tf_seconds_snp = tf_seconds
-        st.session_state.cached_details_snp = details
-        st.session_state.signal_active_snp = True
+        if mercato_tipo == "🚀 Scanner Globale":
+            st.session_state.scanner_results = []
+            combined_dict = {**forex_dict, **otc_dict}
 
-        if "STAND BY" not in direction:
-            send_telegram_alert(
-                selected_display, 
-                tf_choice, 
-                st.session_state.cached_direction_snp, 
-                st.session_state.cached_win_rate_snp, 
-                st.session_state.cached_confidence_snp, 
-                st.session_state.cached_time_snp
-            )
+            progress_bar = st.progress(0)
+            total_items = len(combined_dict)
+            i = 0
+
+            for name, data in combined_dict.items():
+                direction, win_rate, conf, details = ultimate_institutional_analysis(data["symbol"], tf_choice, tf_seconds)
+                if "STAND BY" not in direction:
+                    res_dict = {
+                        "asset": name,
+                        "direction": direction,
+                        "confidence": win_rate,
+                        "rsi": details.get("RSI", "N/A"),
+                        "timeframe": tf_choice
+                    }
+                    st.session_state.scanner_results.append(res_dict)
+                i += 1
+                progress_bar.progress(i / total_items)
+
+            progress_bar.empty()
+            
+            unified_entry_t = get_next_candle_time(tf_seconds)
+            for res in st.session_state.scanner_results:
+                res["entry_time"] = unified_entry_t
+
+            st.session_state.signal_active_snp = True
+        else:
+            direction, win_rate, confidence, details = ultimate_institutional_analysis(selected_asset, tf_choice, tf_seconds)
+            st.session_state.cached_direction_snp = direction
+            st.session_state.cached_win_rate_snp = win_rate
+            st.session_state.cached_confidence_snp = confidence
+            st.session_state.cached_time_snp = get_next_candle_time(tf_seconds)
+            st.session_state.cached_asset_display_snp = selected_display
+            st.session_state.cached_tf_choice_snp = tf_choice
+            st.session_state.cached_tf_seconds_snp = tf_seconds
+            st.session_state.cached_details_snp = details
+            st.session_state.signal_active_snp = True
+
+            if "STAND BY" not in direction:
+                send_telegram_alert(
+                    selected_display, 
+                    tf_choice, 
+                    st.session_state.cached_direction_snp, 
+                    st.session_state.cached_win_rate_snp, 
+                    st.session_state.cached_confidence_snp, 
+                    st.session_state.cached_time_snp
+                )
 
 if st.session_state.signal_active_snp:
     if mercato_tipo == "🚀 Scanner Globale":
@@ -385,35 +446,4 @@ if st.session_state.signal_active_snp:
         details = st.session_state.cached_details_snp
         if details:
             if "STAND BY" in st.session_state.cached_direction_snp:
-                st.markdown(f"""
-                <div class="standby-box">
-                    <h4 style="color: #ff4444; margin-top: 0;">🛑 STAND BY: FILTRI NON SUPERATI</h4>
-                    <p style="color:#ffffff; margin-bottom: 10px;"><b>Asset:</b> {st.session_state.cached_asset_display_snp} | <b>Timeframe:</b> {st.session_state.cached_tf_choice_snp}</p>
-                    <hr style="border-color: #333333; margin: 10px 0;">
-                    <p style="color: #ffffff; text-align: left; margin: 5px 0;"><b>Motivo:</b> Mercato laterale o disallineamento (Stato: {st.session_state.cached_confidence_snp})</p>
-                    <p style="color: #ffffff; text-align: left; margin: 5px 0;"><b>RSI:</b> {details.get('RSI', 'N/A')}</p>
-                    <p style="color: #ffffff; text-align: left; margin: 5px 0;"><b>Trend Macro:</b> {details.get('Trend Macro', 'N/A')}</p>
-                    <p style="color: #ffffff; text-align: left; margin: 5px 0;"><b>Forza ADX:</b> {details.get('ADX Strength', 'N/A')}</p>
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                bollinger_val = details.get('Bollinger Position', 'N/A')
-                bollinger_html = f"<span style='color: #2ecc71; font-weight: bold;'>{bollinger_val}</span>" if "Touch" in bollinger_val else bollinger_val
-
-                st.markdown(f"""
-                <div class="analysis-box">
-                    <h4>🎯 CONFLUENZA ISTITUZIONALE VERIFICATA</h4>
-                    <p style="color:#ffffff;"><b>RSI (14):</b> <span style="color:#2ecc71;">{details.get('RSI', 'N/A')}</span></p>
-                    <p style="color:#ffffff;"><b>Trend Macro:</b> {details.get('Trend Macro', 'N/A')}</p>
-                    <p style="color:#ffffff;"><b>Forza ADX:</b> <span style="color:#2ecc71;">{details.get('ADX Strength', 'N/A')}</span></p>
-                    <p style="color:#ffffff;"><b>Posizione Bollinger:</b> {bollinger_html}</p>
-                </div>
-                """, unsafe_allow_html=True)
-
-        st.markdown("### ⏳ Current Candle Countdown (Pocket Option Sync)")
-        initial_left = get_seconds_to_next_candle(st.session_state.cached_tf_seconds_snp)
-
-        timer_html = f'<div style="font-size: 28px; font-weight: bold; color: #2ecc71; text-align: center; background-color: #141414; padding: 15px; border-radius: 8px; border: 2px solid #2ecc71;" id="countdown_snp">Loading timer...</div><script>var timeLeftSnp = {initial_left}; function updateTimerSnp() {{ if (timeLeftSnp <= 0) {{ document.getElementById("countdown_snp").innerHTML = "⏰ CANDELA CHIUSA!"; document.getElementById("countdown_snp").style.color = "#ff4444"; return; }} var m = Math.floor(timeLeftSnp / 60); var s = timeLeftSnp % 60; document.getElementById("countdown_snp").innerHTML = "⏱️ " + (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s); timeLeftSnp--; }} setInterval(updateTimerSnp, 1000); updateTimerSnp();</script>'
-        
-        components.html(timer_html, height=80)
-
+               
