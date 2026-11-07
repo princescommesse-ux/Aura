@@ -303,15 +303,15 @@ def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence
     if bot_token == "INSERISCI_QUI_IL_TUO_BOT_TOKEN":
         return
     message = (
-        f"⚡ *AURA PRO SIGNAL* ⚡\n\n"
-        f"🔹 *Asset:* `{display_name}`\n"
-        f"⏰ *Timeframe:* `{timeframe}`\n"
-        f"🎯 *Direction:* *{direction}*\n"
-        f"🕒 *Entry Time:* `{entry_time}`\n"
-        f"📈 *Confidence:* `{win_rate}`\n"
-        f"🛡️ *Status:* `{confidence}`"
+        "⚡ *AURA PRO SIGNAL* ⚡\n\n"
+        "🔹 *Asset:* `" + display_name + "`\n"
+        "⏰ *Timeframe:* `" + timeframe + "`\n"
+        "🎯 *Direction:* *" + direction + "*\n"
+        "🕒 *Entry Time:* `" + entry_time + "`\n"
+        "📈 *Confidence:* `" + win_rate + "`\n"
+        "🛡️ *Status:* `" + confidence + "`"
     )
-    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    url = "https://api.telegram.org/bot" + bot_token + "/sendMessage"
     payload = {"chat_id": chat_id, "text": message, "parse_mode": "Markdown"}
     try:
         requests.post(url, json=payload, timeout=3)
@@ -393,11 +393,11 @@ if st.session_state.signal_active_snp:
                 dir_class = "signal-buy" if "BUY" in res['direction'] else "signal-sell"
                 box_html = (
                     '<div class="analysis-box">'
-                    f'<h4 style="color:#ffffff;">{res["asset"]} &rarr; <span class="{dir_class}">{res["direction"]}</span></h4>'
-                    f'<p style="color:#ffffff;"><b>Timeframe:</b> <span style="color:#2ecc71;">{res["timeframe"]}</span> | '
-                    f'<b>Confidence:</b> <span style="color:#2ecc71;">{res["confidence"]}</span> | '
-                    f'<b>RSI:</b> {res["rsi"]} | '
-                    f'<b>Entry:</b> <span style="color:#2ecc71;">{res["entry_time"]}</span></p>'
+                    '<h4 style="color:#ffffff;">' + res['asset'] + ' &rarr; <span class="' + dir_class + '">' + res['direction'] + '</span></h4>'
+                    '<p style="color:#ffffff;"><b>Timeframe:</b> <span style="color:#2ecc71;">' + res['timeframe'] + '</span> | '
+                    '<b>Confidence:</b> <span style="color:#2ecc71;">' + res['confidence'] + '</span> | '
+                    '<b>RSI:</b> ' + res['rsi'] + ' | '
+                    '<b>Entry:</b> <span style="color:#2ecc71;">' + res['entry_time'] + '</span></p>'
                     '</div>'
                 )
                 st.markdown(box_html, unsafe_allow_html=True)
@@ -422,19 +422,19 @@ if st.session_state.signal_active_snp:
             dir_class = "signal-standby"
 
         conf_display = st.session_state.cached_win_rate_snp
-        conf_html = f"<span style='color: #2ecc71; font-weight: bold;'>{conf_display}</span>" if conf_display != "N/A" else "N/A"
+        conf_html = "<span style='color: #2ecc71; font-weight: bold;'>" + conf_display + "</span>" if conf_display != "N/A" else "N/A"
 
         status_display = st.session_state.cached_confidence_snp
-        status_html = f"<span style='color: #2ecc71; font-weight: bold;'>{status_display}</span>" if status_display == "Confluence Verified" else status_display
+        status_html = "<span style='color: #2ecc71; font-weight: bold;'>" + status_display + "</span>" if status_display == "Confluence Verified" else status_display
 
         result_html = (
             '<div class="analysis-box">'
-            f'<p style="color:#ffffff; margin: 6px 0;"><b>Asset:</b> {st.session_state.cached_asset_display_snp}</p>'
-            f'<p style="color:#ffffff; margin: 6px 0;"><b>Timeframe:</b> <span style="color:#2ecc71;">{st.session_state.cached_tf_choice_snp}</span></p>'
-            f'<p style="color:#ffffff; margin: 6px 0;"><b>Signal Direction:</b> <span class="{dir_class}">{dir_display}</span></p>'
-            f'<p style="color:#ffffff; margin: 6px 0;"><b>Entry Time (Candle Close):</b> <span style="color:#2ecc71;">{st.session_state.cached_time_snp}</span></p>'
-            f'<p style="color:#ffffff; margin: 6px 0;"><b>Dynamic AI Confidence:</b> {conf_html}</p>'
-            f'<p style="color:#ffffff; margin: 6px 0;"><b>Filter Status:</b> {status_html}</p>'
+            '<p style="color:#ffffff; margin: 6px 0;"><b>Asset:</b> ' + str(st.session_state.cached_asset_display_snp) + '</p>'
+            '<p style="color:#ffffff; margin: 6px 0;"><b>Timeframe:</b> <span style="color:#2ecc71;">' + str(st.session_state.cached_tf_choice_snp) + '</span></p>'
+            '<p style="color:#ffffff; margin: 6px 0;"><b>Signal Direction:</b> <span class="' + dir_class + '">' + str(dir_display) + '</span></p>'
+            '<p style="color:#ffffff; margin: 6px 0;"><b>Entry Time (Candle Close):</b> <span style="color:#2ecc71;">' + str(st.session_state.cached_time_snp) + '</span></p>'
+            '<p style="color:#ffffff; margin: 6px 0;"><b>Dynamic AI Confidence:</b> ' + conf_html + '</p>'
+            '<p style="color:#ffffff; margin: 6px 0;"><b>Filter Status:</b> ' + status_html + '</p>'
             '</div>'
         )
         st.markdown(result_html, unsafe_allow_html=True)
@@ -445,4 +445,4 @@ if st.session_state.signal_active_snp:
                 standby_detail_html = (
                     '<div class="standby-box">'
                     '<h4 style="color: #ff4444; margin-top: 0;">🛑 STAND BY: FILTRI NON SUPERATI</h4>'
-                    f'<p style="color:#ffffff; margin-bottom: 10px;"><b>Asset:</b> {st.session_state.cached_asset_display_snp} | <b>Timeframe:</b> {st.session_state.cached_tf_choice_sn
+                    '<p style="color:#ffffff; m
