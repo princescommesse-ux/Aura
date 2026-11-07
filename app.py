@@ -332,4 +332,4 @@ if st.session_state.signal_active_snp:
                     '<h4>🎯 CONFLUENZA ISTITUZIONALE VERIFICATA</h4>'
                     '<p style="color:#ffffff;"><b>RSI (14):</b> <span style="color:#2ecc71;">' + str(details.get("RSI", "N/A")) + '</span></p>'
                     '<p style="color:#ffffff;"><b>Trend Macro:</b> ' + str(details.get("Trend Macro", "N/A")) + '</p>'
-                    '<p style="color:#ffffff;"><b>Forza ADX:</b> <span style="color:#2ecc71;">' + str(details.get("ADX Strength", "N/A")) + 
+                    '<p style="color:#ffffff;"><b>Forza ADX:</b> <span style="color:#2ecc71;">' + str(details.get("ADX Strength", "N/A")) +  
