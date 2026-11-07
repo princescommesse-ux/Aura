@@ -7,37 +7,22 @@ import yfinance as yf
 
 st.set_page_config(page_title="Aura Pro", page_icon="⚡", layout="centered")
 
-st.markdown(
-    """
-    <style>
-    .main { background-color: #0d0d0d; color: #ffffff; }
-    h1, h2, h3 { color: #2ecc71 !important; font-weight: bold; }
-    .stButton>button { 
-        width: 100%; border-radius: 8px; font-weight: bold; 
-        background-color: #161616; color: #2ecc71; 
-        border: 2px solid #2ecc71; font-size: 18px;
-    }
-    .stButton>button:hover { 
-        background-color: #2ecc71; color: #000000; border-color: #2ecc71; 
-    }
-    .analysis-box { 
-        background-color: #141414; padding: 18px; border-radius: 10px; 
-        border: 2px solid #2ecc71; margin-top: 15px; color: #ffffff;
-    }
-    .analysis-box h4 { color: #2ecc71 !important; font-size: 20px; }
-    .standby-box { 
-        background-color: #141414; padding: 18px; border-radius: 10px; 
-        border: 2px solid #ff4444; margin-top: 15px; text-align: left; color: #ffffff; 
-    }
-    .signal-buy { color: #2ecc71; font-weight: bold; font-size: 20px; }
-    .signal-sell { color: #ff4444; font-weight: bold; font-size: 20px; }
-    .signal-standby { color: #ff4444; font-weight: bold; font-size: 20px; }
-    .session-badge-open { background-color: #1b4d3e; color: #2ecc71; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; border: 1px solid #2ecc71; }
-    .session-badge-closed { background-color: #3d1b1b; color: #ff4444; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; border: 1px solid #ff4444; }
-    </style>
-    """, 
-    unsafe_allow_html=True,
-)
+st.markdown("""
+<style>
+.main { background-color: #0d0d0d; color: #ffffff; }
+h1, h2, h3 { color: #2ecc71 !important; font-weight: bold; }
+.stButton>button { width: 100%; border-radius: 8px; font-weight: bold; background-color: #161616; color: #2ecc71; border: 2px solid #2ecc71; font-size: 18px; }
+.stButton>button:hover { background-color: #2ecc71; color: #000000; border-color: #2ecc71; }
+.analysis-box { background-color: #141414; padding: 18px; border-radius: 10px; border: 2px solid #2ecc71; margin-top: 15px; color: #ffffff; }
+.analysis-box h4 { color: #2ecc71 !important; font-size: 20px; }
+.standby-box { background-color: #141414; padding: 18px; border-radius: 10px; border: 2px solid #ff4444; margin-top: 15px; text-align: left; color: #ffffff; }
+.signal-buy { color: #2ecc71; font-weight: bold; font-size: 20px; }
+.signal-sell { color: #ff4444; font-weight: bold; font-size: 20px; }
+.signal-standby { color: #ff4444; font-weight: bold; font-size: 20px; }
+.session-badge-open { background-color: #1b4d3e; color: #2ecc71; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; border: 1px solid #2ecc71; }
+.session-badge-closed { background-color: #3d1b1b; color: #ff4444; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; border: 1px solid #ff4444; }
+</style>
+""", unsafe_allow_html=True)
 
 st.title("⚡ AURA PRO ⚡")
 
@@ -78,13 +63,7 @@ for idx, (s_name, s_status) in enumerate(session_names):
 st.markdown("---")
 
 if not market_open:
-    st.markdown(
-        '<div class="standby-box" style="border: 2px solid #ff4444; text-align: center; padding: 20px;">'
-        '<h3 style="color: #ff4444; margin-top: 0;">💤 MERCATO FOREX CHIUSO (WEEKEND)</h3>'
-        '<p style="color:#ffffff; font-size: 16px;">Il mercato delle valute è chiuso per il fine settimana. Le analisi su yFinance non sono disponibili fino alla riapertura (Domenica ore 22:00 UTC). Puoi testare la modalità Crypto OTC.</p>'
-        '</div>',
-        unsafe_allow_html=True
-    )
+    st.markdown('<div class="standby-box" style="border: 2px solid #ff4444; text-align: center; padding: 20px;"><h3 style="color: #ff4444; margin-top: 0;">💤 MERCATO FOREX CHIUSO (WEEKEND)</h3><p style="color:#ffffff; font-size: 16px;">Il mercato delle valute è chiuso per il fine settimana. Le analisi su yFinance non sono disponibili fino alla riapertura (Domenica ore 22:00 UTC). Puoi testare la modalità Crypto OTC.</p></div>', unsafe_allow_html=True)
 
 mercato_tipo = st.radio("Seleziona Modalità:", ["🚀 Scanner Globale", "Forex Reale", "Asset OTC Valute", "Crypto OTC"], horizontal=True)
 
@@ -269,24 +248,10 @@ if st.session_state.signal_active_snp:
         if len(st.session_state.scanner_results) > 0:
             for res in st.session_state.scanner_results:
                 dir_class = "signal-buy" if "BUY" in res['direction'] else "signal-sell"
-                box_html = (
-                    '<div class="analysis-box">'
-                    '<h4 style="color:#ffffff;">' + res['asset'] + ' &rarr; <span class="' + dir_class + '">' + res['direction'] + '</span></h4>'
-                    '<p style="color:#ffffff;"><b>Timeframe:</b> <span style="color:#2ecc71;">' + res['timeframe'] + '</span> | '
-                    '<b>Confidence:</b> <span style="color:#2ecc71;">' + res['confidence'] + '</span> | '
-                    '<b>RSI:</b> ' + res['rsi'] + ' | '
-                    '<b>Entry:</b> <span style="color:#2ecc71;">' + res['entry_time'] + '</span></p>'
-                    '</div>'
-                )
+                box_html = '<div class="analysis-box"><h4 style="color:#ffffff;">' + res['asset'] + ' &rarr; <span class="' + dir_class + '">' + res['direction'] + '</span></h4><p style="color:#ffffff;"><b>Timeframe:</b> <span style="color:#2ecc71;">' + res['timeframe'] + '</span> | <b>Confidence:</b> <span style="color:#2ecc71;">' + res['confidence'] + '</span> | <b>RSI:</b> ' + res['rsi'] + ' | <b>Entry:</b> <span style="color:#2ecc71;">' + res['entry_time'] + '</span></p></div>'
                 st.markdown(box_html, unsafe_allow_html=True)
         else:
-            st.markdown(
-                '<div class="standby-box" style="border: 2px solid #ff4444; text-align: center;">'
-                '<h4 style="color: #ff4444;">🛑 NESSUN SEGNALE IN QUESTO MOMENTO</h4>'
-                '<p style="color:#ffffff;">Nessun asset soddisfa i filtri di allineamento Macro-Trend e ADX.</p>'
-                '</div>',
-                unsafe_allow_html=True
-            )
+            st.markdown('<div class="standby-box" style="border: 2px solid #ff4444; text-align: center;"><h4 style="color: #ff4444;">🛑 NESSUN SEGNALE IN QUESTO MOMENTO</h4><p style="color:#ffffff;">Nessun asset soddisfa i filtri di allineamento Macro-Trend e ADX.</p></div>', unsafe_allow_html=True)
     else:
         st.success("Analysis complete!")
         st.markdown("### SIGNAL RESULT")
@@ -297,39 +262,21 @@ if st.session_state.signal_active_snp:
         status_display = st.session_state.cached_confidence_snp
         status_html = "<span style='color: #2ecc71; font-weight: bold;'>" + status_display + "</span>" if status_display == "Confluence Verified" else status_display
 
-        result_html = (
-            '<div class="analysis-box">'
-            '<p style="color:#ffffff; margin: 6px 0;"><b>Asset:</b> ' + str(st.session_state.cached_asset_display_snp) + '</p>'
-            '<p style="color:#ffffff; margin: 6px 0;"><b>Timeframe:</b> <span style="color:#2ecc71;">' + str(st.session_state.cached_tf_choice_snp) + '</span></p>'
-            '<p style="color:#ffffff; margin: 6px 0;"><b>Signal Direction:</b> <span class="' + dir_class + '">' + str(dir_display) + '</span></p>'
-            '<p style="color:#ffffff; margin: 6px 0;"><b>Entry Time (Candle Close):</b> <span style="color:#2ecc71;">' + str(st.session_state.cached_time_snp) + '</span></p>'
-            '<p style="color:#ffffff; margin: 6px 0;"><b>Dynamic AI Confidence:</b> ' + conf_html + '</p>'
-            '<p style="color:#ffffff; margin: 6px 0;"><b>Filter Status:</b> ' + status_html + '</p>'
-            '</div>'
-        )
+        result_html = '<div class="analysis-box"><p style="color:#ffffff; margin: 6px 0;"><b>Asset:</b> ' + str(st.session_state.cached_asset_display_snp) + '</p><p style="color:#ffffff; margin: 6px 0;"><b>Timeframe:</b> <span style="color:#2ecc71;">' + str(st.session_state.cached_tf_choice_snp) + '</span></p><p style="color:#ffffff; margin: 6px 0;"><b>Signal Direction:</b> <span class="' + dir_class + '">' + str(dir_display) + '</span></p><p style="color:#ffffff; margin: 6px 0;"><b>Entry Time (Candle Close):</b> <span style="color:#2ecc71;">' + str(st.session_state.cached_time_snp) + '</span></p><p style="color:#ffffff; margin: 6px 0;"><b>Dynamic AI Confidence:</b> ' + conf_html + '</p><p style="color:#ffffff; margin: 6px 0;"><b>Filter Status:</b> ' + status_html + '</p></div>'
         st.markdown(result_html, unsafe_allow_html=True)
 
         details = st.session_state.cached_details_snp
         if details:
             if "STAND BY" in st.session_state.cached_direction_snp:
-                standby_detail_html = (
-                    '<div class="standby-box">'
-                    '<h4 style="color: #ff4444; margin-top: 0;">🛑 STAND BY: FILTRI NON SUPERATI</h4>'
-                    '<p style="color:#ffffff; margin-bottom: 10px;"><b>Asset:</b> ' + str(st.session_state.cached_asset_display_snp) + ' | <b>Timeframe:</b> ' + str(st.session_state.cached_tf_choice_snp) + '</p>'
-                    '<hr style="border-color: #333333; margin: 10px 0;">'
-                    '<p style="color: #ffffff; text-align: left; margin: 5px 0;"><b>Motivo:</b> Mercato laterale o disallineamento</p>'
-                    '<p style="color: #ffffff; text-align: left; margin: 5px 0;"><b>RSI:</b> ' + str(details.get("RSI", "N/A")) + '</p>'
-                    '<p style="color: #ffffff; text-align: left; margin: 5px 0;"><b>Trend Macro:</b> ' + str(details.get("Trend Macro", "N/A")) + '</p>'
-                    '<p style="color: #ffffff; text-align: left; margin: 5px 0;"><b>Forza ADX:</b> ' + str(details.get("ADX Strength", "N/A")) + '</p>'
-                    '</div>'
-                )
+                standby_detail_html = '<div class="standby-box"><h4 style="color: #ff4444; margin-top: 0;">🛑 STAND BY: FILTRI NON SUPERATI</h4><p style="color:#ffffff; margin-bottom: 10px;"><b>Asset:</b> ' + str(st.session_state.cached_asset_display_snp) + ' | <b>Timeframe:</b> ' + str(st.session_state.cached_tf_choice_snp) + '</p><hr style="border-color: #333333; margin: 10px 0;"><p style="color: #ffffff; text-align: left; margin: 5px 0;"><b>Motivo:</b> Mercato laterale o disallineamento</p><p style="color: #ffffff; text-align: left; margin: 5px 0;"><b>RSI:</b> ' + str(details.get("RSI", "N/A")) + '</p><p style="color: #ffffff; text-align: left; margin: 5px 0;"><b>Trend Macro:</b> ' + str(details.get("Trend Macro", "N/A")) + '</p><p style="color: #ffffff; text-align: left; margin: 5px 0;"><b>Forza ADX:</b> ' + str(details.get("ADX Strength", "N/A")) + '</p></div>'
                 st.markdown(standby_detail_html, unsafe_allow_html=True)
             else:
                 bollinger_val = details.get('Bollinger Position', 'N/A')
                 bollinger_html = "<span style='color: #2ecc71; font-weight: bold;'>" + bollinger_val + "</span>" if "Touch" in bollinger_val else bollinger_val
-                verified_html = (
-                    '<div class="analysis-box">'
-                    '<h4>🎯 CONFLUENZA ISTITUZIONALE VERIFICATA</h4>'
-                    '<p style="color:#ffffff;"><b>RSI (14):</b> <span style="color:#2ecc71;">' + str(details.get("RSI", "N/A")) + '</span></p>'
-                    '<p style="color:#ffffff;"><b>Trend Macro:</b> ' + str(details.get("Trend Macro", "N/A")) + '</p>'
-                    '<p style="color:#ffffff;"><b>Forza ADX:</b> <span style="color:#2ecc71;">' + str(details.get("ADX Strength", "N/A")) +  
+                verified_html = '<div class="analysis-box"><h4>🎯 CONFLUENZA ISTITUZIONALE VERIFICATA</h4><p style="color:#ffffff;"><b>RSI (14):</b> <span style="color:#2ecc71;">' + str(details.get("RSI", "N/A")) + '</span></p><p style="color:#ffffff;"><b>Trend Macro:</b> ' + str(details.get("Trend Macro", "N/A")) + '</p><p style="color:#ffffff;"><b>Forza ADX:</b> <span style="color:#2ecc71;">' + str(details.get("ADX Strength", "N/A")) + '</span></p><p style="color:#ffffff;"><b>Posizione Bollinger:</b> ' + bollinger_html + '</p></div>'
+                st.markdown(verified_html, unsafe_allow_html=True)
+
+        st.markdown("### ⏳ Current Candle Countdown (Pocket Option Sync)")
+        initial_left = get_seconds_to_next_candle(st.session_state.cached_tf_seconds_snp)
+        
+        timer_html = '<div style="font-size: 28px; font-weight: bold; color: #2ecc71; text-align: center; background-color: #141414; padding: 15px; border-radius: 8px; border: 2px solid #2ecc71;" id="countdown_snp">Loading timer...</div><script>var timeLeftSnp = ' + str(initial_left) + ';function updateTimerSnp() {if (timeLeftSnp <= 0) {document.getElementById("countdown_snp").innerHTML = "⏰ CANDELA CHIUSA!";document.getElementById("countdown_snp").style.color = "#ff4444";return;}var m = Math.floor(timeLeftSnp / 60);var s = timeLeftSnp % 60;document.getElementById("countdown_snp").innerHTML = "⏱️ " + (m < 10 ? "0" +
