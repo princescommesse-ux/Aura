@@ -307,13 +307,14 @@ if st.session_state.signal_active_snp:
                 bollinger_val = details.get('Bollinger Position', 'N/A')
                 bollinger_html = "<span style='color: #2ecc71; font-weight: bold;'>" + bollinger_val + "</span>" if "Touch" in bollinger_val else bollinger_val
                 
+                v_rsi = str(details.get("RSI", "N/A"))
+                v_macro = str(details.get("Trend Macro", "N/A"))
+                v_adx = str(details.get("ADX Strength", "N/A"))
+                
                 verified_html = (
                     '<div class="analysis-box">'
                     '<h4>🎯 CONFLUENZA ISTITUZIONALE VERIFICATA</h4>'
-                    '<p style="color:#ffffff;"><b>RSI (14):</b> <span style="color:#2ecc71;">' + str(details.get("RSI", "N/A")) + '</span></p>'
-                    '<p style="color:#ffffff;"><b>Trend Macro:</b> ' + str(details.get("Trend Macro", "N/A")) + '</p>'
-                    '<p style="color:#ffffff;"><b>Forza ADX:</b> <span style="color:#2ecc71;">' + str(details.get("ADX Strength", "N/A")) + '</span></p>'
-                    '<p style="color:#ffffff;"><b>Posizione Bollinger:</b> ' + bollinger_html + '</p>'
-                    '</div>'
-                )
-                st.markdown(verified
+                    '<p style="color:#ffffff;"><b>RSI (14):</b> <span style="color:#2ecc71;">' + v_rsi + '</span></p>'
+                    '<p style="color:#ffffff;"><b>Trend Macro:</b> ' + v_macro + '</p>'
+                    '<p style="color:#ffffff;"><b>Forza ADX:</b> <span style="color:#2ecc71;">' + v_adx + '</span></p>'
+                    '<p style="color:#ffffff;"><b>Posizione Bollinger:</b> 
