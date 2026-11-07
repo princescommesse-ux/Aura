@@ -321,8 +321,10 @@ if st.session_state.signal_active_snp:
                 v_macro = str(details.get("Trend Macro", "N/A"))
                 v_adx = str(details.get("ADX Strength", "N/A"))
                 
-                box_head = '<h4>🎯 CONFLUENZA ISTITUZIONALE VERIFICATA</h4>'
-                p_rsi = '<p style="color:#ffffff;"><b>RSI (14):</b> <span style="color:#2ecc71;">' + v_rsi + '</span></p>'
-                p_macro = '<p style="color:#ffffff;"><b>Trend Macro:</b> ' + v_macro + '</p>'
-                p_adx = '<p style="color:#ffffff;"><b>Forza ADX:</b> <span style="color:#2ecc71;">' + v_adx + '</span></p>'
-                p_boll = '<p style="color:#ffffff;"><b>Posizione Bollinger:</b> ' + bol
+                verified_html = (
+                    '<div class="analysis-box">'
+                    '<h4>🎯 CONFLUENZA ISTITUZIONALE VERIFICATA</h4>'
+                    '<p style="color:#ffffff;"><b>RSI (14):</b> <span style="color:#2ecc71;">' + v_rsi + '</span></p>'
+                    '<p style="color:#ffffff;"><b>Trend Macro:</b> ' + v_macro + '</p>'
+                    '<p style="color:#ffffff;"><b>Forza ADX:</b> <span style="color:#2ecc71;">' + v_adx + '</span></p>'
+                    '<p s
