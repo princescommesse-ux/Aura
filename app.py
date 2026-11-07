@@ -81,12 +81,6 @@ def get_forex_market_status():
 
 def get_active_sessions(now_utc):
     hour = now_utc.hour
-    # Orari UTC di apertura delle sessioni principali
-    # Sydney: 22:00 - 07:00 UTC
-    # Tokyo: 00:00 - 09:00 UTC
-    # London: 08:00 - 17:00 UTC
-    # New York: 13:00 - 22:00 UTC
-    
     sydney = 22 <= hour or hour < 7
     tokyo = 0 <= hour < 9
     london = 8 <= hour < 17
@@ -446,4 +440,8 @@ if st.session_state.signal_active_snp:
         details = st.session_state.cached_details_snp
         if details:
             if "STAND BY" in st.session_state.cached_direction_snp:
+                st.markdown(f"""
+                <div class="standby-box">
+                    <h4 style="color: #ff4444; margin-top: 0;">🛑 STAND BY: FILTRI NON SUPERATI</h4>
+                    <p styl
                
