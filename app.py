@@ -62,7 +62,7 @@ st.title("⚡ AURA PRO ⚡")
 
 mercato_tipo = st.radio("Seleziona Modalità:", ["🚀 Scanner Globale", "Forex Reale"], horizontal=True)
 
-# Coppie Forex Reali (Rimosse EUR/AUD e NZD/USD)
+# Coppie Forex Reali (Rimosse EUR/AUD, NZD/USD ed EUR/CAD)
 forex_dict = {
     "🇪🇺🇺🇸 EUR/USD": {"symbol": "EURUSD=X"},
     "🇬🇧🇺🇸 GBP/USD": {"symbol": "GBPUSD=X"},
@@ -75,7 +75,6 @@ forex_dict = {
     "🇪🇺🇬🇧 EUR/GBP": {"symbol": "EURGBP=X"},
     "🇦🇺🇯🇵 AUD/JPY": {"symbol": "AUDJPY=X"},
     "🇬🇧🇦🇺 GBP/AUD": {"symbol": "GBPAUD=X"},
-    "🇪🇺🇨🇦 EUR/CAD": {"symbol": "EURCAD=X"},
     "🇬🇧🇨🇦 GBP/CAD": {"symbol": "GBPCAD=X"},
     "🇦🇺🇨🇦 AUD/CAD": {"symbol": "AUDCAD=X"},
     "🇪🇺🇨🇭 EUR/CHF": {"symbol": "EURCHF=X"},
