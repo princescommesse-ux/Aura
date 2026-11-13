@@ -60,7 +60,7 @@ st.markdown(
 
 st.title("⚡ AURA PRO ⚡")
 
-mercato_tipo = st.radio("Seleziona Modalità:", ["🚀 Scanner Globale", "Forex Reale", "Asset OTC Valute", "Crypto OTC"], horizontal=True)
+mercato_tipo = st.radio("Seleziona Modalità:", ["🚀 Scanner Globale", "Forex Reale"], horizontal=True)
 
 # Coppie Forex Reali (Rimosse EUR/AUD e NZD/USD)
 forex_dict = {
@@ -83,46 +83,9 @@ forex_dict = {
     "🇨🇭🇯🇵 CHF/JPY": {"symbol": "CHFJPY=X"}
 }
 
-# Coppie OTC Valute
-otc_dict = {
-    "🇦🇺🇨🇭 AUD/CHF OTC": {"symbol": "AUDCHF=X"},
-    "🇦🇺🇺🇸 AUD/USD OTC": {"symbol": "AUDUSD=X"},
-    "🇨🇦🇯🇵 CAD/JPY OTC": {"symbol": "CADJPY=X"},
-    "🇪🇺🇨🇭 EUR/CHF OTC": {"symbol": "EURCHF=X"},
-    "🇪🇺🇬🇧 EUR/GBP OTC": {"symbol": "EURGBP=X"},
-    "🇪🇺🇺🇸 EUR/USD OTC": {"symbol": "EURUSD=X"},
-    "🇬🇧🇺🇸 GBP/USD OTC": {"symbol": "GBPUSD=X"},
-    "🇺🇸🇨🇭 USD/CHF OTC": {"symbol": "USDCHF=X"},
-    "🇪🇺🇯🇵 EUR/JPY OTC": {"symbol": "EURJPY=X"},
-    "🇺🇸🇨🇦 USD/CAD OTC": {"symbol": "USDCAD=X"},
-    "🇦🇺🇯🇵 AUD/JPY OTC": {"symbol": "AUDJPY=X"},
-    "🇨🇭🇯🇵 CHF/JPY OTC": {"symbol": "CHFJPY=X"},
-    "🇬🇧🇯🇵 GBP/JPY OTC": {"symbol": "GBPJPY=X"},
-    "🇬🇧🇦🇺 GBP/AUD OTC": {"symbol": "GBPAUD=X"},
-    "🇺🇸🇯🇵 USD/JPY OTC": {"symbol": "USDJPY=X"},
-    "🇳🇿🇯🇵 NZD/JPY OTC": {"symbol": "NZDJPY=X"},
-    "🇳🇿🇺🇸 NZD/USD OTC": {"symbol": "NZDUSD=X"},
-    "🇨🇦🇨🇭 CAD/CHF OTC": {"symbol": "CADCHF=X"},
-    "🇦🇺🇨🇦 AUD/CAD OTC": {"symbol": "AUDCAD=X"}
-}
-
-# Crypto OTC
-crypto_otc_dict = {
-    "₿ Bitcoin OTC": {"symbol": "BTC-USD"},
-    "Ξ Ethereum OTC": {"symbol": "ETH-USD"},
-    "☀️ Solana OTC": {"symbol": "SOL-USD"}
-}
-
 if mercato_tipo != "🚀 Scanner Globale":
-    if mercato_tipo == "Forex Reale":
-        selected_display = st.selectbox("Select Currency Pair", list(forex_dict.keys()), key="snp_asset_forex")
-        selected_asset = forex_dict[selected_display]["symbol"]
-    elif mercato_tipo == "Asset OTC Valute":
-        selected_display = st.selectbox("Select OTC Asset", list(otc_dict.keys()), key="snp_asset_otc")
-        selected_asset = otc_dict[selected_display]["symbol"]
-    else:
-        selected_display = st.selectbox("Select Crypto OTC Asset", list(crypto_otc_dict.keys()), key="snp_asset_crypto")
-        selected_asset = crypto_otc_dict[selected_display]["symbol"]
+    selected_display = st.selectbox("Select Currency Pair", list(forex_dict.keys()), key="snp_asset_forex")
+    selected_asset = forex_dict[selected_display]["symbol"]
 
 st.markdown("### ⏰ Timeframe")
 scadenze = {
@@ -284,13 +247,11 @@ if "cached_details_snp" not in st.session_state: st.session_state.cached_details
 if st.button("🚀 RUN SCANNER / ANALYSIS"):
     if mercato_tipo == "🚀 Scanner Globale":
         st.session_state.scanner_results = []
-        combined_dict = {**forex_dict, **otc_dict}
-
         progress_bar = st.progress(0)
-        total_items = len(combined_dict)
+        total_items = len(forex_dict)
         i = 0
 
-        for name, data in combined_dict.items():
+        for name, data in forex_dict.items():
             direction, win_rate, conf, details = ultimate_institutional_analysis(data["symbol"], tf_choice, tf_seconds)
             if "STAND BY" not in direction:
                 res_dict = {
