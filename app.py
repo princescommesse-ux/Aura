@@ -111,7 +111,7 @@ def get_next_candle_time(seconds):
     total_epoch_secs = int(target_time.timestamp())
     aligned_epoch_secs = total_epoch_secs - (total_epoch_secs % seconds)
     aligned_time = datetime.fromtimestamp(aligned_epoch_secs)
-    return aligned_time.strftime("%H:%M:%S")
+    return aligned_time.strftime("%H:%M")
 
 def calculate_adx(df, period=14):
     df = df.copy()
