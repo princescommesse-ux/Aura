@@ -221,7 +221,7 @@ def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence
         f"🔹 *Asset:* `{display_name}`\n"
         f"⏰ *Timeframe:* `{timeframe}`\n"
         f"🎯 *Direction:* *{direction}*\n"
-        f"🕒 *Entry Time:* `{entry_time}`\n"
+        f"🕒 *Next Candle:* `{entry_time}`\n"
         f"📈 *Confidence:* `{win_rate}`\n"
         f"🛡️ *Status:* `{confidence}`"
     )
@@ -303,7 +303,7 @@ if st.session_state.signal_active_snp:
                 st.markdown(f"""
                 <div class="analysis-box">
                     <h4 style="color:#ffffff; margin-bottom:2px;">{res['asset']} &rarr; <span class="{dir_class}">{res['direction']}</span></h4>
-                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Timeframe:</b> <span style="color:#2ecc71;">{res['timeframe']}</span> | <b>Confidence:</b> <span style="color:#2ecc71;">{res['confidence']}</span> | <b>RSI:</b> {res['rsi']} | <b>Entry:</b> <span style="color:#2ecc71;">{res['entry_time']}</span></p>
+                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Timeframe:</b> <span style="color:#2ecc71;">{res['timeframe']}</span> | <b>Confidence:</b> <span style="color:#2ecc71;">{res['confidence']}</span> | <b>RSI:</b> {res['rsi']} | <b>Next Candle:</b> <span style="color:#2ecc71;">{res['entry_time']}</span></p>
                 </div>
                 """, unsafe_allow_html=True)
         else:
@@ -330,7 +330,7 @@ if st.session_state.signal_active_snp:
             <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Asset:</b> {st.session_state.cached_asset_display_snp}</p>
             <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Timeframe:</b> <span style="color:#2ecc71;">{st.session_state.cached_tf_choice_snp}</span></p>
             <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Signal Direction:</b> <span class="{dir_class}">{dir_display}</span></p>
-            <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Entry Time (Candle Close):</b> <span style="color:#2ecc71;">{st.session_state.cached_time_snp}</span></p>
+            <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Next Candle:</b> <span style="color:#2ecc71;">{st.session_state.cached_time_snp}</span></p>
         </div>
         """, unsafe_allow_html=True)
 
