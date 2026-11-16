@@ -34,19 +34,19 @@ st.markdown(
     }
     .analysis-box { 
         background-color: #141414; 
-        padding: 14px; 
+        padding: 10px 14px; 
         border-radius: 10px; 
         border: 2px solid #2ecc71; 
-        margin-top: 10px; 
+        margin-top: 8px; 
         color: #ffffff;
     }
-    .analysis-box h4 { color: #2ecc71 !important; font-size: 18px; margin-bottom: 8px; }
+    .analysis-box h4 { color: #2ecc71 !important; font-size: 18px; margin-bottom: 6px; margin-top: 0px; }
     .standby-box { 
         background-color: #141414; 
-        padding: 14px; 
+        padding: 10px 14px; 
         border-radius: 10px; 
         border: 2px solid #ff4444; 
-        margin-top: 10px; 
+        margin-top: 8px; 
         text-align: left; 
         color: #ffffff; 
     }
@@ -88,11 +88,11 @@ if mercato_tipo != "🚀 Scanner Globale":
 
 st.markdown("### ⏰ Timeframe")
 scadenze = {
-    "M1 (60s)": 60,
-    "M3 (180s)": 180,
-    "M5 (300s)": 300,
-    "M10 (600s)": 600,
-    "M15 (900s)": 900
+    "M1": 60,
+    "M3": 180,
+    "M5": 300,
+    "M10": 600,
+    "M15": 900
 }
 tf_choice = st.radio("Choose from time basket:", list(scadenze.keys()), horizontal=True, key="snp_tf")
 tf_seconds = scadenze[tf_choice]
@@ -136,11 +136,11 @@ def calculate_adx(df, period=14):
 def ultimate_institutional_analysis(ticker, timeframe_choice, tf_sec):
     try:
         interval_map = {
-            "M1 (60s)": ("1m", "5m"),
-            "M3 (180s)": ("2m", "15m"),
-            "M5 (300s)": ("5m", "15m"),
-            "M10 (600s)": ("5m", "30m"),
-            "M15 (900s)": ("15m", "1h")
+            "M1": ("1m", "5m"),
+            "M3": ("2m", "15m"),
+            "M5": ("5m", "15m"),
+            "M10": ("5m", "30m"),
+            "M15": ("15m", "1h")
         }
         iv_micro, iv_macro = interval_map.get(timeframe_choice, ("1m", "5m"))
 
@@ -302,15 +302,15 @@ if st.session_state.signal_active_snp:
                 dir_class = "signal-buy" if "BUY" in res['direction'] else "signal-sell"
                 st.markdown(f"""
                 <div class="analysis-box">
-                    <h4 style="color:#ffffff; margin-bottom:4px;">{res['asset']} &rarr; <span class="{dir_class}">{res['direction']}</span></h4>
-                    <p style="color:#ffffff; margin: 3px 0;"><b>Timeframe:</b> <span style="color:#2ecc71;">{res['timeframe']}</span> | <b>Confidence:</b> <span style="color:#2ecc71;">{res['confidence']}</span> | <b>RSI:</b> {res['rsi']} | <b>Entry:</b> <span style="color:#2ecc71;">{res['entry_time']}</span></p>
+                    <h4 style="color:#ffffff; margin-bottom:2px;">{res['asset']} &rarr; <span class="{dir_class}">{res['direction']}</span></h4>
+                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Timeframe:</b> <span style="color:#2ecc71;">{res['timeframe']}</span> | <b>Confidence:</b> <span style="color:#2ecc71;">{res['confidence']}</span> | <b>RSI:</b> {res['rsi']} | <b>Entry:</b> <span style="color:#2ecc71;">{res['entry_time']}</span></p>
                 </div>
                 """, unsafe_allow_html=True)
         else:
             st.markdown("""
             <div class="standby-box" style="border: 2px solid #ff4444; text-align: center;">
-                <h4 style="color: #ff4444; margin-bottom:4px;">🛑 NO SIGNAL AT THE MOMENT</h4>
-                <p style="color:#ffffff; margin: 3px 0;">No asset meets Macro-Trend and ADX alignment filters.</p>
+                <h4 style="color: #ff4444; margin-bottom:2px;">🛑 NO SIGNAL AT THE MOMENT</h4>
+                <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;">No asset meets Macro-Trend and ADX alignment filters.</p>
             </div>
             """, unsafe_allow_html=True)
     else:
@@ -325,16 +325,12 @@ if st.session_state.signal_active_snp:
         else:
             dir_class = "signal-standby"
 
-        conf_display = st.session_state.cached_win_rate_snp
-        conf_html = f"<span style='color: #2ecc71; font-weight: bold;'>{conf_display}</span>" if conf_display != "N/A" else "N/A"
-
         st.markdown(f"""
         <div class="analysis-box">
-            <p style="color:#ffffff; margin: 3px 0;"><b>Asset:</b> {st.session_state.cached_asset_display_snp}</p>
-            <p style="color:#ffffff; margin: 3px 0;"><b>Timeframe:</b> <span style="color:#2ecc71;">{st.session_state.cached_tf_choice_snp}</span></p>
-            <p style="color:#ffffff; margin: 3px 0;"><b>Signal Direction:</b> <span class="{dir_class}">{dir_display}</span></p>
-            <p style="color:#ffffff; margin: 3px 0;"><b>Entry Time (Candle Close):</b> <span style="color:#2ecc71;">{st.session_state.cached_time_snp}</span></p>
-            <p style="color:#ffffff; margin: 3px 0;"><b>Dynamic AI Confidence:</b> {conf_html}</p>
+            <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Asset:</b> {st.session_state.cached_asset_display_snp}</p>
+            <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Timeframe:</b> <span style="color:#2ecc71;">{st.session_state.cached_tf_choice_snp}</span></p>
+            <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Signal Direction:</b> <span class="{dir_class}">{dir_display}</span></p>
+            <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Entry Time (Candle Close):</b> <span style="color:#2ecc71;">{st.session_state.cached_time_snp}</span></p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -343,26 +339,29 @@ if st.session_state.signal_active_snp:
             if "STAND BY" in st.session_state.cached_direction_snp:
                 st.markdown(f"""
                 <div class="standby-box">
-                    <h4 style="color: #ff4444; margin-top: 0; margin-bottom: 4px;">🛑 STAND BY: FILTERS NOT PASSED</h4>
-                    <p style="color:#ffffff; margin: 3px 0;"><b>Asset:</b> {st.session_state.cached_asset_display_snp} | <b>Timeframe:</b> {st.session_state.cached_tf_choice_snp}</p>
-                    <hr style="border-color: #333333; margin: 8px 0;">
-                    <p style="color: #ffffff; margin: 3px 0;"><b>Reason:</b> Sideways market or misalignment</p>
-                    <p style="color: #ffffff; margin: 3px 0;"><b>RSI:</b> {details.get('RSI', 'N/A')}</p>
-                    <p style="color: #ffffff; margin: 3px 0;"><b>Macro Trend:</b> {details.get('Trend Macro', 'N/A')}</p>
-                    <p style="color: #ffffff; margin: 3px 0;"><b>ADX Strength:</b> {details.get('ADX Strength', 'N/A')}</p>
+                    <h4 style="color: #ff4444; margin-top: 0; margin-bottom: 2px;">🛑 STAND BY: FILTERS NOT PASSED</h4>
+                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Asset:</b> {st.session_state.cached_asset_display_snp} | <b>Timeframe:</b> {st.session_state.cached_tf_choice_snp}</p>
+                    <hr style="border-color: #333333; margin: 4px 0;">
+                    <p style="color: #ffffff; margin: 1px 0; line-height: 1.2;"><b>Reason:</b> Sideways market or misalignment</p>
+                    <p style="color: #ffffff; margin: 1px 0; line-height: 1.2;"><b>RSI:</b> {details.get('RSI', 'N/A')}</p>
+                    <p style="color: #ffffff; margin: 1px 0; line-height: 1.2;"><b>Macro Trend:</b> {details.get('Trend Macro', 'N/A')}</p>
+                    <p style="color: #ffffff; margin: 1px 0; line-height: 1.2;"><b>ADX Strength:</b> {details.get('ADX Strength', 'N/A')}</p>
                 </div>
                 """, unsafe_allow_html=True)
             else:
                 bollinger_val = details.get('Bollinger Position', 'N/A')
                 bollinger_html = f"<span style='color: #2ecc71; font-weight: bold;'>{bollinger_val}</span>" if "Touch" in bollinger_val else bollinger_val
+                conf_display = st.session_state.cached_win_rate_snp
+                conf_html = f"<span style='color: #2ecc71; font-weight: bold;'>{conf_display}</span>" if conf_display != "N/A" else "N/A"
 
                 st.markdown(f"""
                 <div class="analysis-box">
                     <h4>🎯 INSTITUTIONAL CONFLUENCE VERIFIED</h4>
-                    <p style="color:#ffffff; margin: 3px 0;"><b>RSI (14):</b> <span style="color:#2ecc71;">{details.get('RSI', 'N/A')}</span></p>
-                    <p style="color:#ffffff; margin: 3px 0;"><b>Macro Trend:</b> {details.get('Trend Macro', 'N/A')}</p>
-                    <p style="color:#ffffff; margin: 3px 0;"><b>ADX Strength:</b> <span style="color:#2ecc71;">{details.get('ADX Strength', 'N/A')}</span></p>
-                    <p style="color:#ffffff; margin: 3px 0;"><b>Bollinger Position:</b> {bollinger_html}</p>
+                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Dynamic AI Confidence:</b> {conf_html}</p>
+                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>RSI (14):</b> <span style="color:#2ecc71;">{details.get('RSI', 'N/A')}</span></p>
+                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Macro Trend:</b> {details.get('Trend Macro', 'N/A')}</p>
+                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>ADX Strength:</b> <span style="color:#2ecc71;">{details.get('ADX Strength', 'N/A')}</span></p>
+                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Bollinger Position:</b> {bollinger_html}</p>
                 </div>
                 """, unsafe_allow_html=True)
 
