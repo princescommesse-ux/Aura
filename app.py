@@ -59,7 +59,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("⚡ AURA PRO (M5 OTTIMIZZATO) ⚡")
+st.title("⚡ AURA PRO (SOLO M5 - 2 CANDLE TARGET) ⚡")
 
 mercato_tipo = st.radio("Seleziona Modalità:", ["🚀 Scanner Globale M5", "Forex Reale M5"], horizontal=True)
 
@@ -87,9 +87,12 @@ if mercato_tipo != "🚀 Scanner Globale M5":
     selected_display = st.selectbox("Select Currency Pair", list(forex_dict.keys()), key="snp_asset_forex")
     selected_asset = forex_dict[selected_display]["symbol"]
 
+# Timeframe fisso e blindato su M5 (300 sec * 2 candele = 600 secondi / 10 minuti di scadenza)
 tf_choice = "M5 (2 Candele)"
 tf_seconds = 300
+target_duration_seconds = 600 
 
+# Inizializzazione Session State per il tracciamento automatico esiti
 if "auto_history" not in st.session_state:
     st.session_state.auto_history = {} 
 
@@ -140,7 +143,7 @@ def calculate_atr(df, period=14):
 
 def ultimate_institutional_analysis_m5(ticker, display_name):
     try:
-        # Controllo quarantena automatica a 1 errore
+        # CONTROLLO AUTOMATICO ANTI-STREAK (Se l'ultima candela ha chiuso in perdita, scatta il blocco automatico)
         last_result = st.session_state.auto_history.get(display_name, None)
         if last_result == "LOSS":
             st.session_state.auto_history[display_name] = "COOLDOWN_DONE"
@@ -176,7 +179,7 @@ def ultimate_institutional_analysis_m5(ticker, display_name):
         rs = gain / loss
         rsi = 100 - (100 / (1 + rs))
         current_rsi = float(rsi.iloc[-1].item())
-        
+
         sma20 = close.rolling(window=20).mean()
         std20 = close.rolling(window=20).std()
         upper_band = sma20 + (std20 * 2)
@@ -193,16 +196,14 @@ def ultimate_institutional_analysis_m5(ticker, display_name):
         }
 
         direction = "STAND BY / NO TRADE"
-        
-        # Condizioni pulite ed efficienti basate su RSI e Bande di Bollinger
-        if current_rsi <= 48 and macro_bullish and (curr_price <= curr_lower * 1.01):
+        if current_rsi <= 46 and macro_bullish and (curr_price <= curr_lower * 1.01):
             direction = "BUY 🟢"
-        elif current_rsi >= 52 and (not macro_bullish) and (curr_price >= curr_upper * 0.99):
+        elif current_rsi >= 54 and (not macro_bullish) and (curr_price >= curr_upper * 0.99):
             direction = "SELL 🔴"
         else:
             return "STAND BY / NO TRADE", "N/A", "Timeframes Misaligned", details
 
-        # Verifica esito precedente candela (Blocco automatico a 1 errore)
+        # VERIFICA AUTOMATICA ESITO CANDELA PRECEDENTE
         last_candle_open = float(open_p.iloc[-1].item())
         last_candle_close = float(close.iloc[-1].item())
         if direction == "BUY 🟢" and last_candle_close < last_candle_open:
@@ -231,7 +232,7 @@ def send_telegram_alert(display_name, direction, win_rate, confidence, entry_tim
     if bot_token == "INSERISCI_QUI_IL_TUO_BOT_TOKEN":
         return
     message = (
-        f"⚡ *AURA PRO M5 SIGNAL* ⚡\n\n"
+        f"⚡ *AURA PRO M5 (2-CANDLE TARGET)* ⚡\n\n"
         f"🔹 *Asset:* `{display_name}`\n"
         f"⏰ *Scadenza:* `10 Min (2 Candele M5)`\n"
         f"🎯 *Direction:* *{direction}*\n"
