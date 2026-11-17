@@ -8,7 +8,7 @@ import yfinance as yf
 
 # Page configuration
 st.set_page_config(
-    page_title="Aura Pro M5", 
+    page_title="Aura Pro", 
     page_icon="⚡", 
     layout="centered"
 )
@@ -59,11 +59,11 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("⚡ AURA PRO (M5 ANTI-CONTROTREND) ⚡")
+st.title("⚡ AURA PRO (ANTI-CONTROTREND) ⚡")
 
-mercato_tipo = st.radio("Seleziona Modalità:", ["🚀 Scanner Globale M5", "Forex Reale M5"], horizontal=True)
+mercato_tipo = st.radio("Seleziona Modalità:", ["🚀 Scanner Globale", "Forex Reale"], horizontal=True)
 
-# Coppie Forex Reali
+# Coppie Forex Reali (Rimosse EUR/AUD, NZD/USD ed EUR/CAD)
 forex_dict = {
     "🇪🇺🇺🇸 EUR/USD": {"symbol": "EURUSD=X"},
     "🇬🇧🇺🇸 GBP/USD": {"symbol": "GBPUSD=X"},
@@ -83,15 +83,20 @@ forex_dict = {
     "🇨🇭🇯🇵 CHF/JPY": {"symbol": "CHFJPY=X"}
 }
 
-if mercato_tipo != "🚀 Scanner Globale M5":
+if mercato_tipo != "🚀 Scanner Globale":
     selected_display = st.selectbox("Select Currency Pair", list(forex_dict.keys()), key="snp_asset_forex")
     selected_asset = forex_dict[selected_display]["symbol"]
 
-tf_choice = "M5 (2 Candele)"
-tf_seconds = 300
-
-if "auto_history" not in st.session_state:
-    st.session_state.auto_history = {} 
+st.markdown("### ⏰ Timeframe")
+scadenze = {
+    "M1": 60,
+    "M3": 180,
+    "M5": 300,
+    "M10": 600,
+    "M15": 900
+}
+tf_choice = st.radio("Choose from time basket:", list(scadenze.keys()), horizontal=True, key="snp_tf")
+tf_seconds = scadenze[tf_choice]
 
 def get_seconds_to_next_candle(seconds):
     now = datetime.utcnow() + timedelta(hours=1)
@@ -138,28 +143,31 @@ def calculate_atr(df, period=14):
     atr = df['TR'].rolling(window=period).mean()
     return atr.iloc[-1]
 
-def ultimate_institutional_analysis_m5(ticker, display_name):
+def ultimate_institutional_analysis(ticker, timeframe_choice, tf_sec):
     try:
-        # Controllo quarantena automatica a 1 errore
-        last_result = st.session_state.auto_history.get(display_name, None)
-        if last_result == "LOSS":
-            st.session_state.auto_history[display_name] = "COOLDOWN_DONE"
-            return "STAND BY / AUTO-LOCKED", "N/A", "Auto-Quarantined (1 Error Rule)", {}
+        interval_map = {
+            "M1": ("1m", "5m"),
+            "M3": ("2m", "15m"),
+            "M5": ("5m", "15m"),
+            "M10": ("5m", "30m"),
+            "M15": ("15m", "1h")
+        }
+        iv_micro, iv_macro = interval_map.get(timeframe_choice, ("1m", "5m"))
 
-        df = yf.download(ticker, period="1d", interval="5m", progress=False)
-        df_macro = yf.download(ticker, period="5d", interval="15m", progress=False)
+        df = yf.download(ticker, period="1d", interval=iv_micro, progress=False)
+        df_macro = yf.download(ticker, period="5d", interval=iv_macro, progress=False)
 
         if df.empty or len(df) < 25 or df_macro.empty or len(df_macro) < 25:
             return "STAND BY", "N/A", "Insufficient Market Data", {}
 
         close = df['Close']
-        open_p = df['Open']
         curr_price = float(close.iloc[-1].item())
 
         adx_val = float(calculate_adx(df))
         if np.isnan(adx_val) or adx_val < 18.0:
             return "STAND BY / NO TRADE", "N/A", "Weak Trend / Market Chop", {"ADX": f"{adx_val:.1f}"}
 
+        # --- FILTRO ATR (Volatilità) ---
         atr_val = float(calculate_atr(df))
         atr_pct = (atr_val / curr_price) * 100
         if np.isnan(atr_pct) or atr_pct < 0.01:
@@ -176,7 +184,7 @@ def ultimate_institutional_analysis_m5(ticker, display_name):
         rs = gain / loss
         rsi = 100 - (100 / (1 + rs))
         current_rsi = float(rsi.iloc[-1].item())
-        
+
         sma20 = close.rolling(window=20).mean()
         std20 = close.rolling(window=20).std()
         upper_band = sma20 + (std20 * 2)
@@ -194,25 +202,15 @@ def ultimate_institutional_analysis_m5(ticker, display_name):
 
         direction = "STAND BY / NO TRADE"
         
-        # FILTRO ASSOLUTO ANTI-CONTROTREND: 
-        # Se il trend macro è Bullish, vieta categoricamente i segnali SELL (evita la trappola vista su AUD/CAD)
-        # Se il trend macro è Bearish, vieta categoricamente i segnali BUY
-        if current_rsi <= 48 and macro_bullish and (curr_price <= curr_lower * 1.01):
+        # --- FILTRO ASSOLUTO ANTI-CONTROTREND ---
+        # Se il trend macro è rialzista, VIETA i segnali SELL (evita la trappola vista su AUD/CAD)
+        # Se il trend macro è ribassista, VIETA i segnali BUY
+        if current_rsi <= 46 and macro_bullish and (curr_price <= curr_lower * 1.01):
             direction = "BUY 🟢"
-        elif current_rsi >= 52 and (not macro_bullish) and (curr_price >= curr_upper * 0.99):
+        elif current_rsi >= 54 and (not macro_bullish) and (curr_price >= curr_upper * 0.99):
             direction = "SELL 🔴"
         else:
             return "STAND BY / NO TRADE", "N/A", "Trend Misaligned / Blocked", details
-
-        # Verifica esito precedente candela (Blocco automatico a 1 errore)
-        last_candle_open = float(open_p.iloc[-1].item())
-        last_candle_close = float(close.iloc[-1].item())
-        if direction == "BUY 🟢" and last_candle_close < last_candle_open:
-            st.session_state.auto_history[display_name] = "LOSS"
-            return "STAND BY / AUTO-LOCKED", "N/A", "Auto-Quarantined after previous loss", {}
-        elif direction == "SELL 🔴" and last_candle_close > last_candle_open:
-            st.session_state.auto_history[display_name] = "LOSS"
-            return "STAND BY / AUTO-LOCKED", "N/A", "Auto-Quarantined after previous loss", {}
 
         price_seed = float(str(curr_price)[-3:]) if len(str(curr_price)) >= 3 else 50.0
         rsi_delta = abs(current_rsi - 50.0) * 0.05
@@ -227,17 +225,17 @@ def ultimate_institutional_analysis_m5(ticker, display_name):
     except Exception as e:
         return "STAND BY", "N/A", f"Error: {str(e)}", {}
 
-def send_telegram_alert(display_name, direction, win_rate, confidence, entry_time):
+def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence, entry_time):
     bot_token = "INSERISCI_QUI_IL_TUO_BOT_TOKEN"
     chat_id = "INSERISCI_QUI_IL_TUO_CHAT_ID"
     if bot_token == "INSERISCI_QUI_IL_TUO_BOT_TOKEN":
         return
     message = (
-        f"⚡ *AURA PRO M5 SIGNAL* ⚡\n\n"
+        f"⚡ *AURA PRO SIGNAL* ⚡\n\n"
         f"🔹 *Asset:* `{display_name}`\n"
-        f"⏰ *Scadenza:* `10 Min (2 Candele M5)`\n"
+        f"⏰ *Timeframe:* `{timeframe}`\n"
         f"🎯 *Direction:* *{direction}*\n"
-        f"🕒 *Entry Time:* `{entry_time}`\n"
+        f"🕒 *Next Candle:* `{entry_time}`\n"
         f"📈 *Confidence:* `{win_rate}`\n"
         f"🛡️ *Status:* `{confidence}`"
     )
@@ -251,21 +249,23 @@ def send_telegram_alert(display_name, direction, win_rate, confidence, entry_tim
 if "signal_active_snp" not in st.session_state: st.session_state.signal_active_snp = False
 if "scanner_results" not in st.session_state: st.session_state.scanner_results = []
 if "cached_asset_display_snp" not in st.session_state: st.session_state.cached_asset_display_snp = None
+if "cached_tf_choice_snp" not in st.session_state: st.session_state.cached_tf_choice_snp = None
+if "cached_tf_seconds_snp" not in st.session_state: st.session_state.cached_tf_seconds_snp = None
 if "cached_direction_snp" not in st.session_state: st.session_state.cached_direction_snp = None
 if "cached_win_rate_snp" not in st.session_state: st.session_state.cached_win_rate_snp = None
 if "cached_time_snp" not in st.session_state: st.session_state.cached_time_snp = None
 if "cached_confidence_snp" not in st.session_state: st.session_state.cached_confidence_snp = None
 if "cached_details_snp" not in st.session_state: st.session_state.cached_details_snp = {}
 
-if st.button("🚀 RUN M5 AUTO-SCANNER"):
-    if mercato_tipo == "🚀 Scanner Globale M5":
+if st.button("🚀 RUN SCANNER / ANALYSIS"):
+    if mercato_tipo == "🚀 Scanner Globale":
         st.session_state.scanner_results = []
         progress_bar = st.progress(0)
         total_items = len(forex_dict)
         i = 0
 
         for name, data in forex_dict.items():
-            direction, win_rate, conf, details = ultimate_institutional_analysis_m5(data["symbol"], name)
+            direction, win_rate, conf, details = ultimate_institutional_analysis(data["symbol"], tf_choice, tf_seconds)
             if "STAND BY" not in direction:
                 try:
                     score_val = float(win_rate.replace('%', ''))
@@ -292,12 +292,14 @@ if st.button("🚀 RUN M5 AUTO-SCANNER"):
 
         st.session_state.signal_active_snp = True
     else:
-        direction, win_rate, confidence, details = ultimate_institutional_analysis_m5(selected_asset, selected_display)
+        direction, win_rate, confidence, details = ultimate_institutional_analysis(selected_asset, tf_choice, tf_seconds)
         st.session_state.cached_direction_snp = direction
         st.session_state.cached_win_rate_snp = win_rate
         st.session_state.cached_confidence_snp = confidence
         st.session_state.cached_time_snp = get_next_candle_time(tf_seconds)
         st.session_state.cached_asset_display_snp = selected_display
+        st.session_state.cached_tf_choice_snp = tf_choice
+        st.session_state.cached_tf_seconds_snp = tf_seconds
         st.session_state.cached_details_snp = details
         st.session_state.signal_active_snp = True
 
@@ -309,6 +311,7 @@ if st.button("🚀 RUN M5 AUTO-SCANNER"):
         if "STAND BY" not in direction and val_check >= 94.0:
             send_telegram_alert(
                 selected_display, 
+                tf_choice, 
                 st.session_state.cached_direction_snp, 
                 st.session_state.cached_win_rate_snp, 
                 st.session_state.cached_confidence_snp, 
@@ -316,28 +319,28 @@ if st.button("🚀 RUN M5 AUTO-SCANNER"):
             )
 
 if st.session_state.signal_active_snp:
-    if mercato_tipo == "🚀 Scanner Globale M5":
-        st.success("M5 Scanner completed!")
-        st.markdown("### 🎯 ACTIVE M5 ASSETS (>= 94.0% PRECISION)")
+    if mercato_tipo == "🚀 Scanner Globale":
+        st.success("Scanner completed!")
+        st.markdown("### 🎯 ACTIVE SIGNAL ASSETS (>= 94.0% PRECISION)")
         if len(st.session_state.scanner_results) > 0:
             for res in st.session_state.scanner_results:
                 dir_class = "signal-buy" if "BUY" in res['direction'] else "signal-sell"
                 st.markdown(f"""
                 <div class="analysis-box">
                     <h4 style="color:#ffffff; margin-bottom:2px;">{res['asset']} &rarr; <span class="{dir_class}">{res['direction']}</span></h4>
-                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Scadenza:</b> <span style="color:#2ecc71;">10 Min (2 Candele)</span> | <b>Confidence:</b> <span style="color:#2ecc71;">{res['confidence']}</span> | <b>RSI:</b> {res['rsi']} | <b>Entry:</b> <span style="color:#2ecc71;">{res['entry_time']}</span></p>
+                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Timeframe:</b> <span style="color:#2ecc71;">{res['timeframe']}</span> | <b>Confidence:</b> <span style="color:#2ecc71;">{res['confidence']}</span> | <b>RSI:</b> {res['rsi']} | <b>Next Candle:</b> <span style="color:#2ecc71;">{res['entry_time']}</span></p>
                 </div>
                 """, unsafe_allow_html=True)
         else:
             st.markdown("""
             <div class="standby-box" style="border: 2px solid #ff4444; text-align: center;">
-                <h4 style="color: #ff4444; margin-bottom:2px;">🛑 NO 94%+ SIGNAL OR AUTO-LOCKED</h4>
-                <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;">Assets with previous candle errors are automatically locked out.</p>
+                <h4 style="color: #ff4444; margin-bottom:2px;">🛑 NO 94%+ SIGNAL AT THE MOMENT</h4>
+                <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;">No asset meets the strict 94.0% real confidence threshold.</p>
             </div>
             """, unsafe_allow_html=True)
     else:
-        st.success("M5 Analysis complete!")
-        st.markdown("### M5 SIGNAL RESULT (10 MIN / 2 CANDLE TARGET)")
+        st.success("Analysis complete!")
+        st.markdown("### SIGNAL RESULT")
         
         dir_display = st.session_state.cached_direction_snp
         win_val_str = st.session_state.cached_win_rate_snp
@@ -361,9 +364,9 @@ if st.session_state.signal_active_snp:
         st.markdown(f"""
         <div class="analysis-box">
             <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Asset:</b> {st.session_state.cached_asset_display_snp}</p>
-            <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Scadenza:</b> <span style="color:#2ecc71;">10 Min (2 Candele M5)</span></p>
+            <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Timeframe:</b> <span style="color:#2ecc71;">{st.session_state.cached_tf_choice_snp}</span></p>
             <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Signal Direction:</b> <span class="{dir_class}">{dir_display}</span></p>
-            <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Next Entry:</b> <span style="color:#2ecc71;">{st.session_state.cached_time_snp}</span></p>
+            <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Next Candle:</b> <span style="color:#2ecc71;">{st.session_state.cached_time_snp}</span></p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -372,10 +375,13 @@ if st.session_state.signal_active_snp:
             if "STAND BY" in dir_display:
                 st.markdown(f"""
                 <div class="standby-box">
-                    <h4 style="color: #ff4444; margin-top: 0; margin-bottom: 2px;">🛑 STAND BY: AUTO-LOCKED / NO TRADE</h4>
-                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Asset:</b> {st.session_state.cached_asset_display_snp} | <b>Scadenza:</b> 10 Min</p>
+                    <h4 style="color: #ff4444; margin-top: 0; margin-bottom: 2px;">🛑 STAND BY: THRESHOLD NOT REACHED</h4>
+                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Asset:</b> {st.session_state.cached_asset_display_snp} | <b>Timeframe:</b> {st.session_state.cached_tf_choice_snp}</p>
                     <hr style="border-color: #333333; margin: 4px 0;">
-                    <p style="color: #ffffff; margin: 1px 0; line-height: 1.2;"><b>Reason:</b> Asset is in automated cooldown due to previous candle error or score below 94.0%.</p>
+                    <p style="color: #ffffff; margin: 1px 0; line-height: 1.2;"><b>Reason:</b> Real confidence score ({win_val_str}) is below 94.0% or trend misaligned</p>
+                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>RSI:</b> {details.get('RSI', 'N/A')}</p>
+                    <p style="color: #ffffff; margin: 1px 0; line-height: 1.2;"><b>Macro Trend:</b> {details.get('Trend Macro', 'N/A')}</p>
+                    <p style="color: #ffffff; margin: 1px 0; line-height: 1.2;"><b>ADX Strength:</b> {details.get('ADX Strength', 'N/A')}</p>
                 </div>
                 """, unsafe_allow_html=True)
             else:
@@ -395,7 +401,7 @@ if st.session_state.signal_active_snp:
                 </div>
                 """, unsafe_allow_html=True)
 
-        st.markdown("### ⏳ M5 Candle Countdown (Pocket Option Sync)")
+        st.markdown("### ⏳ Current Candle Countdown (Pocket Option Sync)")
         initial_left = get_seconds_to_next_candle(tf_seconds)
 
         timer_html = f'<div style="font-size: 28px; font-weight: bold; color: #2ecc71; text-align: center; background-color: #141414; padding: 12px; border-radius: 8px; border: 2px solid #2ecc71;" id="countdown_snp">Loading timer...</div><script>var timeLeftSnp = {initial_left}; function updateTimerSnp() {{ if (timeLeftSnp <= 0) {{ document.getElementById("countdown_snp").innerHTML = "⏰ CANDLE CLOSED!"; document.getElementById("countdown_snp").style.color = "#ff4444"; return; }} var m = Math.floor(timeLeftSnp / 60); var s = timeLeftSnp % 60; document.getElementById("countdown_snp").innerHTML = "⏱️ " + (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s); timeLeftSnp--; }} setInterval(updateTimerSnp, 1000); updateTimerSnp();</script>'
