@@ -63,7 +63,7 @@ st.title("⚡ AURA PRO ⚡")
 
 mercato_tipo = st.radio("Seleziona Modalità:", ["🚀 Scanner Globale", "Forex Reale"], horizontal=True)
 
-# Coppie Forex Reali
+# Coppie Forex Reali (Rimosse EUR/AUD, NZD/USD ed EUR/CAD)
 forex_dict = {
     "🇪🇺🇺🇸 EUR/USD": {"symbol": "EURUSD=X"},
     "🇬🇧🇺🇸 GBP/USD": {"symbol": "GBPUSD=X"},
@@ -97,10 +97,6 @@ scadenze = {
 }
 tf_choice = st.radio("Choose from time basket:", list(scadenze.keys()), horizontal=True, key="snp_tf")
 tf_seconds = scadenze[tf_choice]
-
-# Inizializzazione Session State per la Quarantena a 1 Errore
-if "quarantined_assets" not in st.session_state:
-    st.session_state.quarantined_assets = set()
 
 def get_seconds_to_next_candle(seconds):
     now = datetime.utcnow() + timedelta(hours=1)
@@ -147,12 +143,8 @@ def calculate_atr(df, period=14):
     atr = df['TR'].rolling(window=period).mean()
     return atr.iloc[-1]
 
-def ultimate_institutional_analysis(ticker, display_name, timeframe_choice, tf_sec):
+def ultimate_institutional_analysis(ticker, timeframe_choice, tf_sec):
     try:
-        # CONTROLLO QUARANTENA (Blocco a 1 Errore)
-        if display_name in st.session_state.quarantined_assets:
-            return "STAND BY / LOCKED", "N/A", "Quarantined (1 Error Lockout)", {}
-
         interval_map = {
             "M1": ("1m", "5m"),
             "M3": ("2m", "15m"),
@@ -175,8 +167,10 @@ def ultimate_institutional_analysis(ticker, display_name, timeframe_choice, tf_s
         if np.isnan(adx_val) or adx_val < 18.0:
             return "STAND BY / NO TRADE", "N/A", "Weak Trend / Market Chop", {"ADX": f"{adx_val:.1f}"}
 
+        # --- FILTRO ATR (Volatilità) ---
         atr_val = float(calculate_atr(df))
         atr_pct = (atr_val / curr_price) * 100
+        # Se la volatilità è quasi zero (mercato piatto), scartiamo il segnale
         if np.isnan(atr_pct) or atr_pct < 0.01:
             return "STAND BY / NO TRADE", "N/A", "Flat Market / Low ATR", {"ATR": "Too Low"}
 
@@ -268,7 +262,7 @@ if st.button("🚀 RUN SCANNER / ANALYSIS"):
         i = 0
 
         for name, data in forex_dict.items():
-            direction, win_rate, conf, details = ultimate_institutional_analysis(data["symbol"], name, tf_choice, tf_seconds)
+            direction, win_rate, conf, details = ultimate_institutional_analysis(data["symbol"], tf_choice, tf_seconds)
             if "STAND BY" not in direction:
                 try:
                     score_val = float(win_rate.replace('%', ''))
@@ -295,7 +289,7 @@ if st.button("🚀 RUN SCANNER / ANALYSIS"):
 
         st.session_state.signal_active_snp = True
     else:
-        direction, win_rate, confidence, details = ultimate_institutional_analysis(selected_asset, selected_display, tf_choice, tf_seconds)
+        direction, win_rate, confidence, details = ultimate_institutional_analysis(selected_asset, tf_choice, tf_seconds)
         st.session_state.cached_direction_snp = direction
         st.session_state.cached_win_rate_snp = win_rate
         st.session_state.cached_confidence_snp = confidence
@@ -322,12 +316,6 @@ if st.button("🚀 RUN SCANNER / ANALYSIS"):
             )
 
 if st.session_state.signal_active_snp:
-    if len(st.session_state.quarantined_assets) > 0:
-        st.warning(f"🔒 Asset attualmente in quarantena (bloccati per 1 errore): {', '.join(st.session_state.quarantined_assets)}")
-        if st.button("🔄 Sblocca Tutti gli Asset"):
-            st.session_state.quarantined_assets.clear()
-            st.rerun()
-
     if mercato_tipo == "🚀 Scanner Globale":
         st.success("Scanner completed!")
         st.markdown("### 🎯 ACTIVE SIGNAL ASSETS (>= 94.0% PRECISION)")
@@ -340,16 +328,6 @@ if st.session_state.signal_active_snp:
                     <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Timeframe:</b> <span style="color:#2ecc71;">{res['timeframe']}</span> | <b>Confidence:</b> <span style="color:#2ecc71;">{res['confidence']}</span> | <b>RSI:</b> {res['rsi']} | <b>Next Candle:</b> <span style="color:#2ecc71;">{res['entry_time']}</span></p>
                 </div>
                 """, unsafe_allow_html=True)
-                
-                # Pulsante rapido di feedback per singolo asset in scanner
-                col_win, col_loss = st.columns(2)
-                with col_win:
-                    if st.button(f"✅ Vinto {res['asset']}", key=f"win_scan_{res['asset']}"):
-                        pass # Segnale corretto, non fa nulla
-                with col_loss:
-                    if st.button(f"❌ Perso (Metti in Quarantena) {res['asset']}", key=f"loss_scan_{res['asset']}"):
-                        st.session_state.quarantined_assets.add(res['asset'])
-                        st.rerun()
         else:
             st.markdown("""
             <div class="standby-box" style="border: 2px solid #ff4444; text-align: center;">
@@ -389,28 +367,18 @@ if st.session_state.signal_active_snp:
         </div>
         """, unsafe_allow_html=True)
 
-        # Pulsanti di esito trade per rispettare il limite di 1 errore massimo
-        if "STAND BY" not in dir_display:
-            st.markdown("#### 📝 Registra Esito Trade (Anti-Streak Lockout):")
-            col_b1, col_b2 = st.columns(2)
-            with col_b1:
-                if st.button("✅ Segnale Vinto"):
-                    st.success("Ottimo! Segnale registrato come vincente.")
-            with col_b2:
-                if st.button("❌ Segnale Perso (Metti in Quarantena)"):
-                    st.session_state.quarantined_assets.add(st.session_state.cached_asset_display_snp)
-                    st.error(f"⚠️ {st.session_state.cached_asset_display_snp} bloccato! Non genererà più segnali per evitare errori consecutivi.")
-                    st.rerun()
-
         details = st.session_state.cached_details_snp
         if details:
             if "STAND BY" in dir_display:
                 st.markdown(f"""
                 <div class="standby-box">
-                    <h4 style="color: #ff4444; margin-top: 0; margin-bottom: 2px;">🛑 STAND BY: THRESHOLD NOT REACHED / LOCKED</h4>
+                    <h4 style="color: #ff4444; margin-top: 0; margin-bottom: 2px;">🛑 STAND BY: THRESHOLD NOT REACHED</h4>
                     <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Asset:</b> {st.session_state.cached_asset_display_snp} | <b>Timeframe:</b> {st.session_state.cached_tf_choice_snp}</p>
                     <hr style="border-color: #333333; margin: 4px 0;">
-                    <p style="color: #ffffff; margin: 1px 0; line-height: 1.2;"><b>Reason:</b> {details.get('ADX Strength', 'Asset in Quarantena o sotto la soglia del 94%')}</p>
+                    <p style="color: #ffffff; margin: 1px 0; line-height: 1.2;"><b>Reason:</b> Real confidence score ({win_val_str}) is below 94.0%</p>
+                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>RSI:</b> {details.get('RSI', 'N/A')}</p>
+                    <p style="color: #ffffff; margin: 1px 0; line-height: 1.2;"><b>Macro Trend:</b> {details.get('Trend Macro', 'N/A')}</p>
+                    <p style="color: #ffffff; margin: 1px 0; line-height: 1.2;"><b>ADX Strength:</b> {details.get('ADX Strength', 'N/A')}</p>
                 </div>
                 """, unsafe_allow_html=True)
             else:
@@ -428,4 +396,11 @@ if st.session_state.signal_active_snp:
                     <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>ATR Volatility:</b> <span style="color:#2ecc71;">{details.get('ATR Volatility', 'N/A')}</span></p>
                     <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Bollinger Position:</b> {bollinger_html}</p>
                 </div>
-                """, unsafe_allow_html=
+                """, unsafe_allow_html=True)
+
+        st.markdown("### ⏳ Current Candle Countdown (Pocket Option Sync)")
+        initial_left = get_seconds_to_next_candle(st.session_state.cached_tf_seconds_snp)
+
+        timer_html = f'<div style="font-size: 28px; font-weight: bold; color: #2ecc71; text-align: center; background-color: #141414; padding: 12px; border-radius: 8px; border: 2px solid #2ecc71;" id="countdown_snp">Loading timer...</div><script>var timeLeftSnp = {initial_left}; function updateTimerSnp() {{ if (timeLeftSnp <= 0) {{ document.getElementById("countdown_snp").innerHTML = "⏰ CANDLE CLOSED!"; document.getElementById("countdown_snp").style.color = "#ff4444"; return; }} var m = Math.floor(timeLeftSnp / 60); var s = timeLeftSnp % 60; document.getElementById("countdown_snp").innerHTML = "⏱️ " + (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s); timeLeftSnp--; }} setInterval(updateTimerSnp, 1000); updateTimerSnp();</script>'
+        
+        components.html(timer_html, height=75)
