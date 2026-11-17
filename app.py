@@ -59,7 +59,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("⚡ AURA PRO (AUTO-PILOT) ⚡")
+st.title("⚡ AURA PRO ⚡")
 
 mercato_tipo = st.radio("Seleziona Modalità:", ["🚀 Scanner Globale", "Forex Reale"], horizontal=True)
 
@@ -98,9 +98,9 @@ scadenze = {
 tf_choice = st.radio("Choose from time basket:", list(scadenze.keys()), horizontal=True, key="snp_tf")
 tf_seconds = scadenze[tf_choice]
 
-# Inizializzazione Session State per il tracciamento automatico esiti
-if "auto_history" not in st.session_state:
-    st.session_state.auto_history = {} # Chiave: Asset, Valore: Ultimo esito ("WIN" o "LOSS")
+# Inizializzazione Session State per la Quarantena a 1 Errore
+if "quarantined_assets" not in st.session_state:
+    st.session_state.quarantined_assets = set()
 
 def get_seconds_to_next_candle(seconds):
     now = datetime.utcnow() + timedelta(hours=1)
@@ -149,12 +149,9 @@ def calculate_atr(df, period=14):
 
 def ultimate_institutional_analysis(ticker, display_name, timeframe_choice, tf_sec):
     try:
-        # CONTROLLO AUTOMATICO ANTI-STREAK (Se l'ultima candela ha chiuso in perdita, blocca in automatico)
-        last_result = st.session_state.auto_history.get(display_name, None)
-        if last_result == "LOSS":
-            # Resettiamo lo stato dopo il salto per dare una nuova opportunità pulita alla sessione successiva
-            st.session_state.auto_history[display_name] = "COOLDOWN_DONE"
-            return "STAND BY / AUTO-LOCKED", "N/A", "Auto-Quarantined (1 Error Rule)", {}
+        # CONTROLLO QUARANTENA (Blocco a 1 Errore)
+        if display_name in st.session_state.quarantined_assets:
+            return "STAND BY / LOCKED", "N/A", "Quarantined (1 Error Lockout)", {}
 
         interval_map = {
             "M1": ("1m", "5m"),
@@ -172,17 +169,7 @@ def ultimate_institutional_analysis(ticker, display_name, timeframe_choice, tf_s
             return "STAND BY", "N/A", "Insufficient Market Data", {}
 
         close = df['Close']
-        open_p = df['Open']
         curr_price = float(close.iloc[-1].item())
-
-        # VERIFICA AUTOMATICA ESITO CANDELA PRECEDENTE (Auto-Apprendimento)
-        # Controlliamo se il segnale precedente emesso per questo asset ha chiuso in gain o loss reale
-        if len(close) >= 3:
-            prev_close = float(close.iloc[-2].item())
-            prev_open = float(open_p.iloc[-2].item())
-            # Verifichiamo se la candela appena conclusa ha rispettato il senso logico
-            # (Se il bot aveva dato indicazione, verifichiamo la chiusura della candela chiusa)
-            pass
 
         adx_val = float(calculate_adx(df))
         if np.isnan(adx_val) or adx_val < 18.0:
@@ -228,17 +215,6 @@ def ultimate_institutional_analysis(ticker, display_name, timeframe_choice, tf_s
         else:
             return "STAND BY / NO TRADE", "N/A", "Timeframes Misaligned", details
 
-        # SIMULAZIONE VERIFICA ESITO CANDELA CHIUSA (Controllo automatico se la candela precedente ha chiuso contro)
-        # Se la candela precedente ha chiuso in direzione opposta al segnale, marchiamo LOSS in automatico per attivare il blocco
-        last_candle_open = float(open_p.iloc[-1].item())
-        last_candle_close = float(close.iloc[-1].item())
-        if direction == "BUY 🟢" and last_candle_close < last_candle_open:
-            st.session_state.auto_history[display_name] = "LOSS"
-            return "STAND BY / AUTO-LOCKED", "N/A", "Auto-Quarantined after previous loss", {}
-        elif direction == "SELL 🔴" and last_candle_close > last_candle_open:
-            st.session_state.auto_history[display_name] = "LOSS"
-            return "STAND BY / AUTO-LOCKED", "N/A", "Auto-Quarantined after previous loss", {}
-
         price_seed = float(str(curr_price)[-3:]) if len(str(curr_price)) >= 3 else 50.0
         rsi_delta = abs(current_rsi - 50.0) * 0.05
         
@@ -258,7 +234,7 @@ def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence
     if bot_token == "INSERISCI_QUI_IL_TUO_BOT_TOKEN":
         return
     message = (
-        f"⚡ *AURA PRO AUTO SIGNAL* ⚡\n\n"
+        f"⚡ *AURA PRO SIGNAL* ⚡\n\n"
         f"🔹 *Asset:* `{display_name}`\n"
         f"⏰ *Timeframe:* `{timeframe}`\n"
         f"🎯 *Direction:* *{direction}*\n"
@@ -284,7 +260,7 @@ if "cached_time_snp" not in st.session_state: st.session_state.cached_time_snp =
 if "cached_confidence_snp" not in st.session_state: st.session_state.cached_confidence_snp = None
 if "cached_details_snp" not in st.session_state: st.session_state.cached_details_snp = {}
 
-if st.button("🚀 RUN AUTO-SCANNER / ANALYSIS"):
+if st.button("🚀 RUN SCANNER / ANALYSIS"):
     if mercato_tipo == "🚀 Scanner Globale":
         st.session_state.scanner_results = []
         progress_bar = st.progress(0)
@@ -346,8 +322,14 @@ if st.button("🚀 RUN AUTO-SCANNER / ANALYSIS"):
             )
 
 if st.session_state.signal_active_snp:
+    if len(st.session_state.quarantined_assets) > 0:
+        st.warning(f"🔒 Asset attualmente in quarantena (bloccati per 1 errore): {', '.join(st.session_state.quarantined_assets)}")
+        if st.button("🔄 Sblocca Tutti gli Asset"):
+            st.session_state.quarantined_assets.clear()
+            st.rerun()
+
     if mercato_tipo == "🚀 Scanner Globale":
-        st.success("Auto-Scanner completed!")
+        st.success("Scanner completed!")
         st.markdown("### 🎯 ACTIVE SIGNAL ASSETS (>= 94.0% PRECISION)")
         if len(st.session_state.scanner_results) > 0:
             for res in st.session_state.scanner_results:
@@ -358,16 +340,26 @@ if st.session_state.signal_active_snp:
                     <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Timeframe:</b> <span style="color:#2ecc71;">{res['timeframe']}</span> | <b>Confidence:</b> <span style="color:#2ecc71;">{res['confidence']}</span> | <b>RSI:</b> {res['rsi']} | <b>Next Candle:</b> <span style="color:#2ecc71;">{res['entry_time']}</span></p>
                 </div>
                 """, unsafe_allow_html=True)
+                
+                # Pulsante rapido di feedback per singolo asset in scanner
+                col_win, col_loss = st.columns(2)
+                with col_win:
+                    if st.button(f"✅ Vinto {res['asset']}", key=f"win_scan_{res['asset']}"):
+                        pass # Segnale corretto, non fa nulla
+                with col_loss:
+                    if st.button(f"❌ Perso (Metti in Quarantena) {res['asset']}", key=f"loss_scan_{res['asset']}"):
+                        st.session_state.quarantined_assets.add(res['asset'])
+                        st.rerun()
         else:
             st.markdown("""
             <div class="standby-box" style="border: 2px solid #ff4444; text-align: center;">
-                <h4 style="color: #ff4444; margin-bottom:2px;">🛑 NO 94%+ SIGNAL OR AUTO-LOCKED</h4>
-                <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;">Assets with previous candle errors are automatically locked out.</p>
+                <h4 style="color: #ff4444; margin-bottom:2px;">🛑 NO 94%+ SIGNAL AT THE MOMENT</h4>
+                <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;">No asset meets the strict 94.0% real confidence threshold.</p>
             </div>
             """, unsafe_allow_html=True)
     else:
         st.success("Analysis complete!")
-        st.markdown("### SIGNAL RESULT (AUTO-MANAGED)")
+        st.markdown("### SIGNAL RESULT")
         
         dir_display = st.session_state.cached_direction_snp
         win_val_str = st.session_state.cached_win_rate_snp
@@ -397,15 +389,28 @@ if st.session_state.signal_active_snp:
         </div>
         """, unsafe_allow_html=True)
 
+        # Pulsanti di esito trade per rispettare il limite di 1 errore massimo
+        if "STAND BY" not in dir_display:
+            st.markdown("#### 📝 Registra Esito Trade (Anti-Streak Lockout):")
+            col_b1, col_b2 = st.columns(2)
+            with col_b1:
+                if st.button("✅ Segnale Vinto"):
+                    st.success("Ottimo! Segnale registrato come vincente.")
+            with col_b2:
+                if st.button("❌ Segnale Perso (Metti in Quarantena)"):
+                    st.session_state.quarantined_assets.add(st.session_state.cached_asset_display_snp)
+                    st.error(f"⚠️ {st.session_state.cached_asset_display_snp} bloccato! Non genererà più segnali per evitare errori consecutivi.")
+                    st.rerun()
+
         details = st.session_state.cached_details_snp
         if details:
             if "STAND BY" in dir_display:
                 st.markdown(f"""
                 <div class="standby-box">
-                    <h4 style="color: #ff4444; margin-top: 0; margin-bottom: 2px;">🛑 STAND BY: AUTO-LOCKED / NO TRADE</h4>
+                    <h4 style="color: #ff4444; margin-top: 0; margin-bottom: 2px;">🛑 STAND BY: THRESHOLD NOT REACHED / LOCKED</h4>
                     <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Asset:</b> {st.session_state.cached_asset_display_snp} | <b>Timeframe:</b> {st.session_state.cached_tf_choice_snp}</p>
                     <hr style="border-color: #333333; margin: 4px 0;">
-                    <p style="color: #ffffff; margin: 1px 0; line-height: 1.2;"><b>Reason:</b> Asset is in automated cooldown due to previous candle error or score below 94.0%.</p>
+                    <p style="color: #ffffff; margin: 1px 0; line-height: 1.2;"><b>Reason:</b> {details.get('ADX Strength', 'Asset in Quarantena o sotto la soglia del 94%')}</p>
                 </div>
                 """, unsafe_allow_html=True)
             else:
@@ -421,4 +426,6 @@ if st.session_state.signal_active_snp:
                     <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Macro Trend:</b> {details.get('Trend Macro', 'N/A')}</p>
                     <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>ADX Strength:</b> <span style="color:#2ecc71;">{details.get('ADX Strength', 'N/A')}</span></p>
                     <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>ATR Volatility:</b> <span style="color:#2ecc71;">{details.get('ATR Volatility', 'N/A')}</span></p>
-                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Bollinger Posit
+                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Bollinger Position:</b> {bollinger_html}</p>
+                </div>
+                """, unsafe_allow_html=
