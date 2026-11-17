@@ -1,3 +1,4 @@
+
 from datetime import datetime, timedelta
 import random
 import numpy as np
@@ -134,6 +135,15 @@ def calculate_adx(df, period=14):
     adx = dx.rolling(window=period).mean()
     return adx.iloc[-1]
 
+def calculate_atr(df, period=14):
+    df = df.copy()
+    df['H-L'] = df['High'] - df['Low']
+    df['H-PC'] = abs(df['High'] - df['Close'].shift(1))
+    df['L-PC'] = abs(df['Low'] - df['Close'].shift(1))
+    df['TR'] = df[['H-L', 'H-PC', 'L-PC']].max(axis=1)
+    atr = df['TR'].rolling(window=period).mean()
+    return atr.iloc[-1]
+
 def ultimate_institutional_analysis(ticker, timeframe_choice, tf_sec):
     try:
         interval_map = {
@@ -158,6 +168,13 @@ def ultimate_institutional_analysis(ticker, timeframe_choice, tf_sec):
         if np.isnan(adx_val) or adx_val < 18.0:
             return "STAND BY / NO TRADE", "N/A", "Weak Trend / Market Chop", {"ADX": f"{adx_val:.1f}"}
 
+        # --- FILTRO ATR (Volatilità) ---
+        atr_val = float(calculate_atr(df))
+        atr_pct = (atr_val / curr_price) * 100
+        # Se la volatilità è quasi zero (mercato piatto), scartiamo il segnale
+        if np.isnan(atr_pct) or atr_pct < 0.01:
+            return "STAND BY / NO TRADE", "N/A", "Flat Market / Low ATR", {"ATR": "Too Low"}
+
         macro_close = df_macro['Close']
         macro_ema9 = macro_close.ewm(span=9, adjust=False).mean()
         macro_ema21 = macro_close.ewm(span=21, adjust=False).mean()
@@ -181,6 +198,7 @@ def ultimate_institutional_analysis(ticker, timeframe_choice, tf_sec):
             "RSI": f"{current_rsi:.1f}",
             "Trend Macro": "BULLISH 🟢" if macro_bullish else "BEARISH 🔴",
             "ADX Strength": f"{adx_val:.1f} (Strong)" if adx_val >= 25 else f"{adx_val:.1f} (Moderate)",
+            "ATR Volatility": f"{atr_pct:.3f}% (Optimal)",
             "Bollinger Position": "Support Touch" if curr_price <= curr_lower * 1.005 else ("Resistance Touch" if curr_price >= curr_upper * 0.995 else "Channel")
         }
 
@@ -376,6 +394,7 @@ if st.session_state.signal_active_snp:
                     <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>RSI (14):</b> <span style="color:#2ecc71;">{details.get('RSI', 'N/A')}</span></p>
                     <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Macro Trend:</b> {details.get('Trend Macro', 'N/A')}</p>
                     <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>ADX Strength:</b> <span style="color:#2ecc71;">{details.get('ADX Strength', 'N/A')}</span></p>
+                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>ATR Volatility:</b> <span style="color:#2ecc71;">{details.get('ATR Volatility', 'N/A')}</span></p>
                     <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Bollinger Position:</b> {bollinger_html}</p>
                 </div>
                 """, unsafe_allow_html=True)
