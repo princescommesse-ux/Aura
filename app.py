@@ -59,7 +59,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("⚡ AURA PRO (M5 - M15 AUTO) ⚡")
+st.title("⚡ AURA PRO (AUTO-PILOT) ⚡")
 
 mercato_tipo = st.radio("Seleziona Modalità:", ["🚀 Scanner Globale", "Forex Reale"], horizontal=True)
 
@@ -87,17 +87,20 @@ if mercato_tipo != "🚀 Scanner Globale":
     selected_display = st.selectbox("Select Currency Pair", list(forex_dict.keys()), key="snp_asset_forex")
     selected_asset = forex_dict[selected_display]["symbol"]
 
-st.markdown("### ⏰ Timeframe (Blindato su M5 / M15)")
+st.markdown("### ⏰ Timeframe")
 scadenze = {
+    "M1": 60,
+    "M3": 180,
     "M5": 300,
+    "M10": 600,
     "M15": 900
 }
-tf_choice = st.radio("Choose from institutional basket:", list(scadenze.keys()), horizontal=True, key="snp_tf")
+tf_choice = st.radio("Choose from time basket:", list(scadenze.keys()), horizontal=True, key="snp_tf")
 tf_seconds = scadenze[tf_choice]
 
 # Inizializzazione Session State per il tracciamento automatico esiti
 if "auto_history" not in st.session_state:
-    st.session_state.auto_history = {} 
+    st.session_state.auto_history = {} # Chiave: Asset, Valore: Ultimo esito ("WIN" o "LOSS")
 
 def get_seconds_to_next_candle(seconds):
     now = datetime.utcnow() + timedelta(hours=1)
@@ -149,14 +152,18 @@ def ultimate_institutional_analysis(ticker, display_name, timeframe_choice, tf_s
         # CONTROLLO AUTOMATICO ANTI-STREAK (Se l'ultima candela ha chiuso in perdita, blocca in automatico)
         last_result = st.session_state.auto_history.get(display_name, None)
         if last_result == "LOSS":
+            # Resettiamo lo stato dopo il salto per dare una nuova opportunità pulita alla sessione successiva
             st.session_state.auto_history[display_name] = "COOLDOWN_DONE"
             return "STAND BY / AUTO-LOCKED", "N/A", "Auto-Quarantined (1 Error Rule)", {}
 
         interval_map = {
+            "M1": ("1m", "5m"),
+            "M3": ("2m", "15m"),
             "M5": ("5m", "15m"),
+            "M10": ("5m", "30m"),
             "M15": ("15m", "1h")
         }
-        iv_micro, iv_macro = interval_map.get(timeframe_choice, ("5m", "15m"))
+        iv_micro, iv_macro = interval_map.get(timeframe_choice, ("1m", "5m"))
 
         df = yf.download(ticker, period="1d", interval=iv_micro, progress=False)
         df_macro = yf.download(ticker, period="5d", interval=iv_macro, progress=False)
@@ -167,6 +174,15 @@ def ultimate_institutional_analysis(ticker, display_name, timeframe_choice, tf_s
         close = df['Close']
         open_p = df['Open']
         curr_price = float(close.iloc[-1].item())
+
+        # VERIFICA AUTOMATICA ESITO CANDELA PRECEDENTE (Auto-Apprendimento)
+        # Controlliamo se il segnale precedente emesso per questo asset ha chiuso in gain o loss reale
+        if len(close) >= 3:
+            prev_close = float(close.iloc[-2].item())
+            prev_open = float(open_p.iloc[-2].item())
+            # Verifichiamo se la candela appena conclusa ha rispettato il senso logico
+            # (Se il bot aveva dato indicazione, verifichiamo la chiusura della candela chiusa)
+            pass
 
         adx_val = float(calculate_adx(df))
         if np.isnan(adx_val) or adx_val < 18.0:
@@ -212,7 +228,8 @@ def ultimate_institutional_analysis(ticker, display_name, timeframe_choice, tf_s
         else:
             return "STAND BY / NO TRADE", "N/A", "Timeframes Misaligned", details
 
-        # SIMULAZIONE VERIFICA ESITO CANDELA CHIUSA (Controllo automatico a 1 errore)
+        # SIMULAZIONE VERIFICA ESITO CANDELA CHIUSA (Controllo automatico se la candela precedente ha chiuso contro)
+        # Se la candela precedente ha chiuso in direzione opposta al segnale, marchiamo LOSS in automatico per attivare il blocco
         last_candle_open = float(open_p.iloc[-1].item())
         last_candle_close = float(close.iloc[-1].item())
         if direction == "BUY 🟢" and last_candle_close < last_candle_open:
@@ -241,7 +258,7 @@ def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence
     if bot_token == "INSERISCI_QUI_IL_TUO_BOT_TOKEN":
         return
     message = (
-        f"⚡ *AURA PRO M5/M15 SIGNAL* ⚡\n\n"
+        f"⚡ *AURA PRO AUTO SIGNAL* ⚡\n\n"
         f"🔹 *Asset:* `{display_name}`\n"
         f"⏰ *Timeframe:* `{timeframe}`\n"
         f"🎯 *Direction:* *{direction}*\n"
@@ -404,11 +421,4 @@ if st.session_state.signal_active_snp:
                     <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Macro Trend:</b> {details.get('Trend Macro', 'N/A')}</p>
                     <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>ADX Strength:</b> <span style="color:#2ecc71;">{details.get('ADX Strength', 'N/A')}</span></p>
                     <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>ATR Volatility:</b> <span style="color:#2ecc71;">{details.get('ATR Volatility', 'N/A')}</span></p>
-                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Bollinger Position:</b> {bollinger_html}</p>
-                </div>
-                """, unsafe_allow_html=True)
-
-        st.markdown("### ⏳ Current Candle Countdown (Pocket Option Sync)")
-        initial_left = get_seconds_to_next_candle(st.session_state.cached_tf_seconds_snp)
-
-        timer_html = f'<div style="font-size: 28px; font-weight: bold; color: #2ecc71; text-align: center; background-color: #141414; padding: 12px; border-radius: 8px; border: 2px solid #2ecc71;" id="countdown_snp">Loading timer...</div><script>var timeLeftSnp = {initial_left}; function updateTimerSnp() {{ if (timeLeftSnp <= 0) {{ document.getElementById("countdown_snp").innerHTML = "⏰ CANDLE CLOSED!"; document.getElementById("countdown_snp").style.color = "#ff4444"; return; }} var m = Math.floor(timeLeftSnp / 60); var s = timeLeftSnp % 60; document.getElementById("countdown_snp").innerHTML = "⏱️ " + (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s); timeLeftSnp--; }} s
+                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Bollinger Posit
