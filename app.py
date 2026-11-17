@@ -59,7 +59,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("⚡ AURA PRO (M5 + CONFERMA CURVA) ⚡")
+st.title("⚡ AURA PRO (M5 OTTIMIZZATO) ⚡")
 
 mercato_tipo = st.radio("Seleziona Modalità:", ["🚀 Scanner Globale M5", "Forex Reale M5"], horizontal=True)
 
@@ -175,10 +175,7 @@ def ultimate_institutional_analysis_m5(ticker, display_name):
         loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
         rs = gain / loss
         rsi = 100 - (100 / (1 + rs))
-        
-        # FILTRO DI CONFERMA DELLA CURVA (Controllo delle ultime 2 barre dell'RSI)
         current_rsi = float(rsi.iloc[-1].item())
-        prev_rsi = float(rsi.iloc[-2].item())
         
         sma20 = close.rolling(window=20).mean()
         std20 = close.rolling(window=20).std()
@@ -197,16 +194,15 @@ def ultimate_institutional_analysis_m5(ticker, display_name):
 
         direction = "STAND BY / NO TRADE"
         
-        # Condizione BUY con conferma della curva (RSI era in ipervenduto/basso ed è risalito nella barra corrente creando l'uncino)
-        if current_rsi <= 46 and current_rsi > prev_rsi and macro_bullish and (curr_price <= curr_lower * 1.01):
+        # Condizioni pulite ed efficienti basate su RSI e Bande di Bollinger
+        if current_rsi <= 48 and macro_bullish and (curr_price <= curr_lower * 1.01):
             direction = "BUY 🟢"
-        # Condizione SELL con conferma della curva (RSI era in ipercomprato/alto ed è sceso nella barra corrente creando l'uncino)
-        elif current_rsi >= 54 and current_rsi < prev_rsi and (not macro_bullish) and (curr_price >= curr_upper * 0.99):
+        elif current_rsi >= 52 and (not macro_bullish) and (curr_price >= curr_upper * 0.99):
             direction = "SELL 🔴"
         else:
-            return "STAND BY / NO TRADE", "N/A", "Waiting for Curve Hook / Misaligned", details
+            return "STAND BY / NO TRADE", "N/A", "Timeframes Misaligned", details
 
-        # Verifica esito precedente candela
+        # Verifica esito precedente candela (Blocco automatico a 1 errore)
         last_candle_open = float(open_p.iloc[-1].item())
         last_candle_close = float(close.iloc[-1].item())
         if direction == "BUY 🟢" and last_candle_close < last_candle_open:
@@ -224,7 +220,7 @@ def ultimate_institutional_analysis_m5(ticker, display_name):
         
         confidence_str = f"{final_score:.1f}%"
 
-        return direction, confidence_str, "Curve Hook Verified", details
+        return direction, confidence_str, "Confluence Verified", details
 
     except Exception as e:
         return "STAND BY", "N/A", f"Error: {str(e)}", {}
@@ -235,7 +231,7 @@ def send_telegram_alert(display_name, direction, win_rate, confidence, entry_tim
     if bot_token == "INSERISCI_QUI_IL_TUO_BOT_TOKEN":
         return
     message = (
-        f"⚡ *AURA PRO M5 (CURVE HOOK)* ⚡\n\n"
+        f"⚡ *AURA PRO M5 SIGNAL* ⚡\n\n"
         f"🔹 *Asset:* `{display_name}`\n"
         f"⏰ *Scadenza:* `10 Min (2 Candele M5)`\n"
         f"🎯 *Direction:* *{direction}*\n"
@@ -320,7 +316,7 @@ if st.button("🚀 RUN M5 AUTO-SCANNER"):
 if st.session_state.signal_active_snp:
     if mercato_tipo == "🚀 Scanner Globale M5":
         st.success("M5 Scanner completed!")
-        st.markdown("### 🎯 ACTIVE M5 ASSETS (CURVE HOOK VERIFIED)")
+        st.markdown("### 🎯 ACTIVE M5 ASSETS (>= 94.0% PRECISION)")
         if len(st.session_state.scanner_results) > 0:
             for res in st.session_state.scanner_results:
                 dir_class = "signal-buy" if "BUY" in res['direction'] else "signal-sell"
@@ -333,13 +329,13 @@ if st.session_state.signal_active_snp:
         else:
             st.markdown("""
             <div class="standby-box" style="border: 2px solid #ff4444; text-align: center;">
-                <h4 style="color: #ff4444; margin-bottom:2px;">🛑 WAITING FOR CURVE HOOK / LOCKED</h4>
-                <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;">No asset has completed the reversal hook yet.</p>
+                <h4 style="color: #ff4444; margin-bottom:2px;">🛑 NO 94%+ SIGNAL OR AUTO-LOCKED</h4>
+                <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;">Assets with previous candle errors are automatically locked out.</p>
             </div>
             """, unsafe_allow_html=True)
     else:
         st.success("M5 Analysis complete!")
-        st.markdown("### M5 SIGNAL RESULT (CURVE HOOK FILTER)")
+        st.markdown("### M5 SIGNAL RESULT (10 MIN / 2 CANDLE TARGET)")
         
         dir_display = st.session_state.cached_direction_snp
         win_val_str = st.session_state.cached_win_rate_snp
@@ -374,10 +370,10 @@ if st.session_state.signal_active_snp:
             if "STAND BY" in dir_display:
                 st.markdown(f"""
                 <div class="standby-box">
-                    <h4 style="color: #ff4444; margin-top: 0; margin-bottom: 2px;">🛑 STAND BY: WAITING FOR CURVE HOOK</h4>
+                    <h4 style="color: #ff4444; margin-top: 0; margin-bottom: 2px;">🛑 STAND BY: AUTO-LOCKED / NO TRADE</h4>
                     <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Asset:</b> {st.session_state.cached_asset_display_snp} | <b>Scadenza:</b> 10 Min</p>
                     <hr style="border-color: #333333; margin: 4px 0;">
-                    <p style="color: #ffffff; margin: 1px 0; line-height: 1.2;"><b>Reason:</b> Indicator has not completed the reversal hook/curve yet, or asset is in auto-cooldown.</p>
+                    <p style="color: #ffffff; margin: 1px 0; line-height: 1.2;"><b>Reason:</b> Asset is in automated cooldown due to previous candle error or score below 94.0%.</p>
                 </div>
                 """, unsafe_allow_html=True)
             else:
@@ -387,9 +383,9 @@ if st.session_state.signal_active_snp:
 
                 st.markdown(f"""
                 <div class="analysis-box">
-                    <h4>🎯 CURVE HOOK INSTITUTIONAL VERIFIED</h4>
+                    <h4>🎯 HIGH PRECISION INSTITUTIONAL VERIFIED</h4>
                     <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Dynamic AI Confidence:</b> {conf_html}</p>
-                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>RSI (14) Hook:</b> <span style="color:#2ecc71;">{details.get('RSI', 'N/A')} (Confirmed Reversal)</span></p>
+                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>RSI (14):</b> <span style="color:#2ecc71;">{details.get('RSI', 'N/A')}</span></p>
                     <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Macro Trend:</b> {details.get('Trend Macro', 'N/A')}</p>
                     <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>ADX Strength:</b> <span style="color:#2ecc71;">{details.get('ADX Strength', 'N/A')}</span></p>
                     <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>ATR Volatility:</b> <span style="color:#2ecc71;">{details.get('ATR Volatility', 'N/A')}</span></p>
