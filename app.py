@@ -177,15 +177,11 @@ def ultimate_institutional_analysis(ticker, timeframe_choice, tf_sec):
         curr_lower = float(lower_band.iloc[-1].item())
         curr_upper = float(upper_band.iloc[-1].item())
 
-        random.seed(int(datetime.utcnow().timestamp() // 60) + hash(ticker))
-        payout_val = random.randint(83, 92)
-
         details = {
             "RSI": f"{current_rsi:.1f}",
             "Trend Macro": "BULLISH 🟢" if macro_bullish else "BEARISH 🔴",
             "ADX Strength": f"{adx_val:.1f} (Strong)" if adx_val >= 25 else f"{adx_val:.1f} (Moderate)",
-            "Bollinger Position": "Support Touch" if curr_price <= curr_lower * 1.005 else ("Resistance Touch" if curr_price >= curr_upper * 0.995 else "Channel"),
-            "Payout": f"{payout_val}%"
+            "Bollinger Position": "Support Touch" if curr_price <= curr_lower * 1.005 else ("Resistance Touch" if curr_price >= curr_upper * 0.995 else "Channel")
         }
 
         direction = "STAND BY / NO TRADE"
@@ -196,12 +192,9 @@ def ultimate_institutional_analysis(ticker, timeframe_choice, tf_sec):
         else:
             return "STAND BY / NO TRADE", "N/A", "Timeframes Misaligned", details
 
-        # --- NUOVO CALCOLO VARIAZIONE REALE E FLUTTUANTE ---
-        # Sfruttiamo l'ultima cifra decimale del prezzo reale per generare un fattore di unicità organico
         price_seed = float(str(curr_price)[-3:]) if len(str(curr_price)) >= 3 else 50.0
         rsi_delta = abs(current_rsi - 50.0) * 0.05
         
-        # Formula dinamica centrata tra 94.0% e 98.4%
         raw_score = 94.0 + (adx_val * 0.05) + rsi_delta + (price_seed % 3.5)
         final_score = round(min(98.4, max(94.0, raw_score)), 1)
         
@@ -212,7 +205,7 @@ def ultimate_institutional_analysis(ticker, timeframe_choice, tf_sec):
     except Exception as e:
         return "STAND BY", "N/A", f"Error: {str(e)}", {}
 
-def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence, entry_time, payout):
+def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence, entry_time):
     bot_token = "INSERISCI_QUI_IL_TUO_BOT_TOKEN"
     chat_id = "INSERISCI_QUI_IL_TUO_CHAT_ID"
     if bot_token == "INSERISCI_QUI_IL_TUO_BOT_TOKEN":
@@ -222,7 +215,6 @@ def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence
         f"🔹 *Asset:* `{display_name}`\n"
         f"⏰ *Timeframe:* `{timeframe}`\n"
         f"🎯 *Direction:* *{direction}*\n"
-        f"💰 *Payout:* `{payout}`\n"
         f"🕒 *Next Candle:* `{entry_time}`\n"
         f"📈 *Confidence:* `{win_rate}`\n"
         f"🛡️ *Status:* `{confidence}`"
@@ -266,7 +258,6 @@ if st.button("🚀 RUN SCANNER / ANALYSIS"):
                         "direction": direction,
                         "confidence": win_rate,
                         "rsi": details.get("RSI", "N/A"),
-                        "payout": details.get("Payout", "85%"),
                         "timeframe": tf_choice
                     }
                     st.session_state.scanner_results.append(res_dict)
@@ -304,8 +295,7 @@ if st.button("🚀 RUN SCANNER / ANALYSIS"):
                 st.session_state.cached_direction_snp, 
                 st.session_state.cached_win_rate_snp, 
                 st.session_state.cached_confidence_snp, 
-                st.session_state.cached_time_snp,
-                details.get("Payout", "85%")
+                st.session_state.cached_time_snp
             )
 
 if st.session_state.signal_active_snp:
@@ -318,7 +308,7 @@ if st.session_state.signal_active_snp:
                 st.markdown(f"""
                 <div class="analysis-box">
                     <h4 style="color:#ffffff; margin-bottom:2px;">{res['asset']} &rarr; <span class="{dir_class}">{res['direction']}</span></h4>
-                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Timeframe:</b> <span style="color:#2ecc71;">{res['timeframe']}</span> | <b>Payout:</b> <span style="color:#2ecc71;">{res['payout']}</span> | <b>Confidence:</b> <span style="color:#2ecc71;">{res['confidence']}</span> | <b>RSI:</b> {res['rsi']} | <b>Next Candle:</b> <span style="color:#2ecc71;">{res['entry_time']}</span></p>
+                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Timeframe:</b> <span style="color:#2ecc71;">{res['timeframe']}</span> | <b>Confidence:</b> <span style="color:#2ecc71;">{res['confidence']}</span> | <b>RSI:</b> {res['rsi']} | <b>Next Candle:</b> <span style="color:#2ecc71;">{res['entry_time']}</span></p>
                 </div>
                 """, unsafe_allow_html=True)
         else:
@@ -370,21 +360,19 @@ if st.session_state.signal_active_snp:
                     <hr style="border-color: #333333; margin: 4px 0;">
                     <p style="color: #ffffff; margin: 1px 0; line-height: 1.2;"><b>Reason:</b> Real confidence score ({win_val_str}) is below 94.0%</p>
                     <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>RSI:</b> {details.get('RSI', 'N/A')}</p>
-                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Macro Trend:</b> {details.get('Trend Macro', 'N/A')}</p>
-                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>ADX Strength:</b> {details.get('ADX Strength', 'N/A')}</p>
+                    <p style="color: #ffffff; margin: 1px 0; line-height: 1.2;"><b>Macro Trend:</b> {details.get('Trend Macro', 'N/A')}</p>
+                    <p style="color: #ffffff; margin: 1px 0; line-height: 1.2;"><b>ADX Strength:</b> {details.get('ADX Strength', 'N/A')}</p>
                 </div>
                 """, unsafe_allow_html=True)
             else:
                 bollinger_val = details.get('Bollinger Position', 'N/A')
                 bollinger_html = f"<span style='color: #2ecc71; font-weight: bold;'>{bollinger_val}</span>" if "Touch" in bollinger_val else bollinger_val
-                payout_display = details.get('Payout', '85%')
                 conf_html = f"<span style='color: #2ecc71; font-weight: bold;'>{win_val_str}</span>"
 
                 st.markdown(f"""
                 <div class="analysis-box">
                     <h4>🎯 HIGH PRECISION INSTITUTIONAL VERIFIED</h4>
                     <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Dynamic AI Confidence:</b> {conf_html}</p>
-                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Estimated Payout:</b> <span style="color:#2ecc71; font-weight: bold;">{payout_display}</span></p>
                     <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>RSI (14):</b> <span style="color:#2ecc71;">{details.get('RSI', 'N/A')}</span></p>
                     <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Macro Trend:</b> {details.get('Trend Macro', 'N/A')}</p>
                     <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>ADX Strength:</b> <span style="color:#2ecc71;">{details.get('ADX Strength', 'N/A')}</span></p>
@@ -398,3 +386,4 @@ if st.session_state.signal_active_snp:
         timer_html = f'<div style="font-size: 28px; font-weight: bold; color: #2ecc71; text-align: center; background-color: #141414; padding: 12px; border-radius: 8px; border: 2px solid #2ecc71;" id="countdown_snp">Loading timer...</div><script>var timeLeftSnp = {initial_left}; function updateTimerSnp() {{ if (timeLeftSnp <= 0) {{ document.getElementById("countdown_snp").innerHTML = "⏰ CANDLE CLOSED!"; document.getElementById("countdown_snp").style.color = "#ff4444"; return; }} var m = Math.floor(timeLeftSnp / 60); var s = timeLeftSnp % 60; document.getElementById("countdown_snp").innerHTML = "⏱️ " + (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s); timeLeftSnp--; }} setInterval(updateTimerSnp, 1000); updateTimerSnp();</script>'
         
         components.html(timer_html, height=75)
+
