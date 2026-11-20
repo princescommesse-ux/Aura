@@ -321,7 +321,7 @@ if st.button("🚀 RUN SCANNER / ANALYSIS"):
 if st.session_state.signal_active_snp:
     if mercato_tipo == "🚀 Scanner Globale":
         st.success("Scanner completed!")
-        st.markdown("### 🎯 ACTIVE SIGNAL ASSETS (>= 94.0% PRECISION)")
+        st.markdown("### 🎯 Active signal")
         if len(st.session_state.scanner_results) > 0:
             for res in st.session_state.scanner_results:
                 dir_class = "signal-buy" if "BUY" in res['direction'] else "signal-sell"
