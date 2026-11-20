@@ -59,7 +59,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("NO LINK TRADER (ANTI-CONTROTREND)")
+st.title("NO LINK TRADER")
 
 mercato_tipo = st.radio("Seleziona Modalità:", ["🚀 Scanner Globale", "Forex Reale"], horizontal=True)
 
