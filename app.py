@@ -8,40 +8,40 @@ import yfinance as yf
 
 # Page configuration
 st.set_page_config(
-    page_title="Aura Pro", 
-    page_icon="⚡", 
+    page_title="NO LINK TRADER", 
+    page_icon="🔵", 
     layout="centered"
 )
 
-# Custom Dark Mode styling (Verde classico #2ecc71 e Bianco)
+# Custom Dark Mode styling (Blu #3498db e Bianco)
 st.markdown(
     """
     <style>
     .main { background-color: #0d0d0d; color: #ffffff; }
-    h1, h2, h3 { color: #2ecc71 !important; font-weight: bold; }
+    h1, h2, h3 { color: #3498db !important; font-weight: bold; }
     .stButton>button { 
         width: 100%; 
         border-radius: 8px; 
         font-weight: bold; 
         background-color: #161616; 
-        color: #2ecc71; 
-        border: 2px solid #2ecc71; 
+        color: #3498db; 
+        border: 2px solid #3498db; 
         font-size: 18px;
     }
     .stButton>button:hover { 
-        background-color: #2ecc71; 
+        background-color: #3498db; 
         color: #000000; 
-        border-color: #2ecc71; 
+        border-color: #3498db; 
     }
     .analysis-box { 
         background-color: #141414; 
         padding: 10px 14px; 
         border-radius: 10px; 
-        border: 2px solid #2ecc71; 
+        border: 2px solid #3498db; 
         margin-top: 8px; 
         color: #ffffff;
     }
-    .analysis-box h4 { color: #2ecc71 !important; font-size: 18px; margin-bottom: 6px; margin-top: 0px; }
+    .analysis-box h4 { color: #3498db !important; font-size: 18px; margin-bottom: 6px; margin-top: 0px; }
     .standby-box { 
         background-color: #141414; 
         padding: 10px 14px; 
@@ -51,7 +51,7 @@ st.markdown(
         text-align: left; 
         color: #ffffff; 
     }
-    .signal-buy { color: #2ecc71; font-weight: bold; font-size: 18px; }
+    .signal-buy { color: #3498db; font-weight: bold; font-size: 18px; }
     .signal-sell { color: #ff4444; font-weight: bold; font-size: 18px; }
     .signal-standby { color: #ff4444; font-weight: bold; font-size: 18px; }
     </style>
@@ -59,7 +59,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("⚡ AURA PRO (ANTI-CONTROTREND) ⚡")
+st.title("NO LINK TRADER (ANTI-CONTROTREND)")
 
 mercato_tipo = st.radio("Seleziona Modalità:", ["🚀 Scanner Globale", "Forex Reale"], horizontal=True)
 
@@ -206,7 +206,7 @@ def ultimate_institutional_analysis(ticker, timeframe_choice, tf_sec):
         # Se il trend macro è rialzista, VIETA i segnali SELL (evita la trappola vista su AUD/CAD)
         # Se il trend macro è ribassista, VIETA i segnali BUY
         if current_rsi <= 46 and macro_bullish and (curr_price <= curr_lower * 1.01):
-            direction = "BUY 🟢"
+            direction = "BUY 🔵"
         elif current_rsi >= 54 and (not macro_bullish) and (curr_price >= curr_upper * 0.99):
             direction = "SELL 🔴"
         else:
@@ -231,7 +231,7 @@ def send_telegram_alert(display_name, timeframe, direction, win_rate, confidence
     if bot_token == "INSERISCI_QUI_IL_TUO_BOT_TOKEN":
         return
     message = (
-        f"⚡ *AURA PRO SIGNAL* ⚡\n\n"
+        f"*NO LINK TRADER SIGNAL*\n\n"
         f"🔹 *Asset:* `{display_name}`\n"
         f"⏰ *Timeframe:* `{timeframe}`\n"
         f"🎯 *Direction:* *{direction}*\n"
@@ -328,7 +328,7 @@ if st.session_state.signal_active_snp:
                 st.markdown(f"""
                 <div class="analysis-box">
                     <h4 style="color:#ffffff; margin-bottom:2px;">{res['asset']} &rarr; <span class="{dir_class}">{res['direction']}</span></h4>
-                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Timeframe:</b> <span style="color:#2ecc71;">{res['timeframe']}</span> | <b>Confidence:</b> <span style="color:#2ecc71;">{res['confidence']}</span> | <b>RSI:</b> {res['rsi']} | <b>Next Candle:</b> <span style="color:#2ecc71;">{res['entry_time']}</span></p>
+                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Timeframe:</b> <span style="color:#3498db;">{res['timeframe']}</span> | <b>Confidence:</b> <span style="color:#3498db;">{res['confidence']}</span> | <b>RSI:</b> {res['rsi']} | <b>Next Candle:</b> <span style="color:#3498db;">{res['entry_time']}</span></p>
                 </div>
                 """, unsafe_allow_html=True)
         else:
@@ -364,9 +364,9 @@ if st.session_state.signal_active_snp:
         st.markdown(f"""
         <div class="analysis-box">
             <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Asset:</b> {st.session_state.cached_asset_display_snp}</p>
-            <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Timeframe:</b> <span style="color:#2ecc71;">{st.session_state.cached_tf_choice_snp}</span></p>
+            <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Timeframe:</b> <span style="color:#3498db;">{st.session_state.cached_tf_choice_snp}</span></p>
             <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Signal Direction:</b> <span class="{dir_class}">{dir_display}</span></p>
-            <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Next Candle:</b> <span style="color:#2ecc71;">{st.session_state.cached_time_snp}</span></p>
+            <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Next Candle:</b> <span style="color:#3498db;">{st.session_state.cached_time_snp}</span></p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -386,17 +386,17 @@ if st.session_state.signal_active_snp:
                 """, unsafe_allow_html=True)
             else:
                 bollinger_val = details.get('Bollinger Position', 'N/A')
-                bollinger_html = f"<span style='color: #2ecc71; font-weight: bold;'>{bollinger_val}</span>" if "Touch" in bollinger_val else bollinger_val
-                conf_html = f"<span style='color: #2ecc71; font-weight: bold;'>{win_val_str}</span>"
+                bollinger_html = f"<span style='color: #3498db; font-weight: bold;'>{bollinger_val}</span>" if "Touch" in bollinger_val else bollinger_val
+                conf_html = f"<span style='color: #3498db; font-weight: bold;'>{win_val_str}</span>"
 
                 st.markdown(f"""
                 <div class="analysis-box">
                     <h4>🎯 HIGH PRECISION INSTITUTIONAL VERIFIED</h4>
                     <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Dynamic AI Confidence:</b> {conf_html}</p>
-                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>RSI (14):</b> <span style="color:#2ecc71;">{details.get('RSI', 'N/A')}</span></p>
+                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>RSI (14):</b> <span style="color:#3498db;">{details.get('RSI', 'N/A')}</span></p>
                     <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Macro Trend:</b> {details.get('Trend Macro', 'N/A')}</p>
-                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>ADX Strength:</b> <span style="color:#2ecc71;">{details.get('ADX Strength', 'N/A')}</span></p>
-                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>ATR Volatility:</b> <span style="color:#2ecc71;">{details.get('ATR Volatility', 'N/A')}</span></p>
+                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>ADX Strength:</b> <span style="color:#3498db;">{details.get('ADX Strength', 'N/A')}</span></p>
+                    <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>ATR Volatility:</b> <span style="color:#3498db;">{details.get('ATR Volatility', 'N/A')}</span></p>
                     <p style="color:#ffffff; margin: 1px 0; line-height: 1.2;"><b>Bollinger Position:</b> {bollinger_html}</p>
                 </div>
                 """, unsafe_allow_html=True)
@@ -404,6 +404,6 @@ if st.session_state.signal_active_snp:
         st.markdown("### ⏳ Current Candle Countdown (Pocket Option Sync)")
         initial_left = get_seconds_to_next_candle(tf_seconds)
 
-        timer_html = f'<div style="font-size: 28px; font-weight: bold; color: #2ecc71; text-align: center; background-color: #141414; padding: 12px; border-radius: 8px; border: 2px solid #2ecc71;" id="countdown_snp">Loading timer...</div><script>var timeLeftSnp = {initial_left}; function updateTimerSnp() {{ if (timeLeftSnp <= 0) {{ document.getElementById("countdown_snp").innerHTML = "⏰ CANDLE CLOSED!"; document.getElementById("countdown_snp").style.color = "#ff4444"; return; }} var m = Math.floor(timeLeftSnp / 60); var s = timeLeftSnp % 60; document.getElementById("countdown_snp").innerHTML = "⏱️ " + (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s); timeLeftSnp--; }} setInterval(updateTimerSnp, 1000); updateTimerSnp();</script>'
+        timer_html = f'<div style="font-size: 28px; font-weight: bold; color: #3498db; text-align: center; background-color: #141414; padding: 12px; border-radius: 8px; border: 2px solid #3498db;" id="countdown_snp">Loading timer...</div><script>var timeLeftSnp = {initial_left}; function updateTimerSnp() {{ if (timeLeftSnp <= 0) {{ document.getElementById("countdown_snp").innerHTML = "⏰ CANDLE CLOSED!"; document.getElementById("countdown_snp").style.color = "#ff4444"; return; }} var m = Math.floor(timeLeftSnp / 60); var s = timeLeftSnp % 60; document.getElementById("countdown_snp").innerHTML = "⏱️ " + (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s); timeLeftSnp--; }} setInterval(updateTimerSnp, 1000); updateTimerSnp();</script>'
         
         components.html(timer_html, height=75)
